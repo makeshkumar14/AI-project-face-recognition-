@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Class Selection - AI-Powered Face Recognition Attendance System">
+    <title>Select Class | Smart Attendance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Class Selection Specific Styles */
+        .class-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .class-card {
+            background: rgba(30, 30, 50, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 3rem;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .class-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .class-header-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .class-header h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+
+        .class-header p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.95rem;
+        }
+
+        .selected-subject {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.1));
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .selected-subject-icon {
+            font-size: 1.5rem;
+        }
+
+        .selected-subject-info h4 {
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .selected-subject-info p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85rem;
+        }
+
+        .form-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-section-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.7);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 1rem;
+        }
+
+        .option-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+
+        .option-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .option-item:hover {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .option-item.selected {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: #6366f1;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+        }
+
+        .option-item input[type="radio"] {
+            display: none;
+        }
+
+        .option-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .option-name {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .option-code {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 0.25rem;
+        }
+
+        .section-scroll-container {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding: 0.5rem 0;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(99, 102, 241, 0.5) rgba(255, 255, 255, 0.1);
+        }
+
+        .section-scroll-container::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .section-scroll-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .section-scroll-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-radius: 4px;
+        }
+
+        .section-btn {
+            flex-shrink: 0;
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .section-btn:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: rgba(99, 102, 241, 0.4);
+            transform: scale(1.05);
+        }
+
+        .section-btn.selected {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.4), rgba(139, 92, 246, 0.3));
+            border-color: #6366f1;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+            transform: scale(1.1);
+        }
+
+        .section-btn input[type="radio"] {
+            display: none;
+        }
+
+        .class-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .class-actions .btn {
+            flex: 1;
+        }
+
+        @media (max-width: 600px) {
+            .option-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .section-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .class-card {
+                padding: 2rem;
+            }
+        }
+    </style>
+</head>
+
+<body class="theme-dark">
+    <!-- Animated Background -->
+    <div class="bg-animated"></div>
+
+    <!-- Class Selection Container -->
+    <div class="class-container">
+        <div class="class-card fade-in">
+            <!-- Selected Subject Display -->
+            <div class="selected-subject">
+                <span class="selected-subject-icon">📚</span>
+                <div class="selected-subject-info">
+                    <h4>Selected Subject</h4>
+                    <p>{{ session.get('current_subject', 'Not Selected') }}</p>
+                </div>
+            </div>
+
+            <!-- Header -->
+            <div class="class-header">
+                <span class="class-header-icon">🏛️</span>
+                <h2>Select Class</h2>
+                <p>Choose department and section for attendance</p>
+            </div>
+
+            <!-- Class Selection Form -->
+            <form action="{{ url_for('select_class') }}" method="POST" id="classForm">
+                <!-- Department Selection -->
+                <div class="form-section">
+                    <div class="form-section-title">Department</div>
+                    <div class="option-grid">
+                        <label class="option-item" for="cse">
+                            <input type="radio" name="department" id="cse" value="CSE" required>
+                            <span class="option-icon">💻</span>
+                            <div class="option-name">CSE</div>
+                            <div class="option-code">Computer Science</div>
+                        </label>
+
+                        <label class="option-item" for="ece">
+                            <input type="radio" name="department" id="ece" value="ECE">
+                            <span class="option-icon">📡</span>
+                            <div class="option-name">ECE</div>
+                            <div class="option-code">Electronics</div>
+                        </label>
+
+                        <label class="option-item" for="it">
+                            <input type="radio" name="department" id="it" value="IT">
+                            <span class="option-icon">🌐</span>
+                            <div class="option-name">IT</div>
+                            <div class="option-code">Info Technology</div>
+                        </label>
+
+                        <label class="option-item" for="eee">
+                            <input type="radio" name="department" id="eee" value="EEE">
+                            <span class="option-icon">⚡</span>
+                            <div class="option-name">EEE</div>
+                            <div class="option-code">Electrical</div>
+                        </label>
+
+                        <label class="option-item" for="mech">
+                            <input type="radio" name="department" id="mech" value="MECH">
+                            <span class="option-icon">⚙️</span>
+                            <div class="option-name">MECH</div>
+                            <div class="option-code">Mechanical</div>
+                        </label>
+
+                        <label class="option-item" for="civil">
+                            <input type="radio" name="department" id="civil" value="CIVIL">
+                            <span class="option-icon">🏗️</span>
+                            <div class="option-name">CIVIL</div>
+                            <div class="option-code">Civil Engg</div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Section Selection -->
+                <div class="form-section">
+                    <div class="form-section-title">Section (A-Z)</div>
+                    <div class="section-scroll-container" id="sectionContainer">
+                        <label class="section-btn" for="sec-a">
+                            <input type="radio" name="section" id="sec-a" value="A" required>
+                            A
+                        </label>
+                        <label class="section-btn" for="sec-b">
+                            <input type="radio" name="section" id="sec-b" value="B">
+                            B
+                        </label>
+                        <label class="section-btn" for="sec-c">
+                            <input type="radio" name="section" id="sec-c" value="C">
+                            C
+                        </label>
+                        <label class="section-btn" for="sec-d">
+                            <input type="radio" name="section" id="sec-d" value="D">
+                            D
+                        </label>
+                        <label class="section-btn" for="sec-e">
+                            <input type="radio" name="section" id="sec-e" value="E">
+                            E
+                        </label>
+                        <label class="section-btn" for="sec-f">
+                            <input type="radio" name="section" id="sec-f" value="F">
+                            F
+                        </label>
+                        <label class="section-btn" for="sec-g">
+                            <input type="radio" name="section" id="sec-g" value="G">
+                            G
+                        </label>
+                        <label class="section-btn" for="sec-h">
+                            <input type="radio" name="section" id="sec-h" value="H">
+                            H
+                        </label>
+                        <label class="section-btn" for="sec-i">
+                            <input type="radio" name="section" id="sec-i" value="I">
+                            I
+                        </label>
+                        <label class="section-btn" for="sec-j">
+                            <input type="radio" name="section" id="sec-j" value="J">
+                            J
+                        </label>
+                        <label class="section-btn" for="sec-k">
+                            <input type="radio" name="section" id="sec-k" value="K">
+                            K
+                        </label>
+                        <label class="section-btn" for="sec-l">
+                            <input type="radio" name="section" id="sec-l" value="L">
+                            L
+                        </label>
+                        <label class="section-btn" for="sec-m">
+                            <input type="radio" name="section" id="sec-m" value="M">
+                            M
+                        </label>
+                        <label class="section-btn" for="sec-n">
+                            <input type="radio" name="section" id="sec-n" value="N">
+                            N
+                        </label>
+                        <label class="section-btn" for="sec-o">
+                            <input type="radio" name="section" id="sec-o" value="O">
+                            O
+                        </label>
+                        <label class="section-btn" for="sec-p">
+                            <input type="radio" name="section" id="sec-p" value="P">
+                            P
+                        </label>
+                        <label class="section-btn" for="sec-q">
+                            <input type="radio" name="section" id="sec-q" value="Q">
+                            Q
+                        </label>
+                        <label class="section-btn" for="sec-r">
+                            <input type="radio" name="section" id="sec-r" value="R">
+                            R
+                        </label>
+                        <label class="section-btn" for="sec-s">
+                            <input type="radio" name="section" id="sec-s" value="S">
+                            S
+                        </label>
+                        <label class="section-btn" for="sec-t">
+                            <input type="radio" name="section" id="sec-t" value="T">
+                            T
+                        </label>
+                        <label class="section-btn" for="sec-u">
+                            <input type="radio" name="section" id="sec-u" value="U">
+                            U
+                        </label>
+                        <label class="section-btn" for="sec-v">
+                            <input type="radio" name="section" id="sec-v" value="V">
+                            V
+                        </label>
+                        <label class="section-btn" for="sec-w">
+                            <input type="radio" name="section" id="sec-w" value="W">
+                            W
+                        </label>
+                        <label class="section-btn" for="sec-x">
+                            <input type="radio" name="section" id="sec-x" value="X">
+                            X
+                        </label>
+                        <label class="section-btn" for="sec-y">
+                            <input type="radio" name="section" id="sec-y" value="Y">
+                            Y
+                        </label>
+                        <label class="section-btn" for="sec-z">
+                            <input type="radio" name="section" id="sec-z" value="Z">
+                            Z
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="class-actions">
+                    <a href="{{ url_for('select_subject') }}" class="btn btn-outline">
+                        <span class="btn-icon">←</span>
+                        Back
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <span class="btn-icon">▶️</span>
+                        Start Attendance
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Handle option selection visual feedback
+        document.querySelectorAll('.option-item, .section-btn').forEach(option => {
+            option.addEventListener('click', function () {
+                // Get the parent form-section
+                const section = this.closest('.form-section');
+                // Remove selected class from siblings
+                section.querySelectorAll('.option-item, .section-btn').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                // Add selected class to clicked option
+                this.classList.add('selected');
+            });
+        });
+
+        // Enable Enter key to submit form
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                const form = document.getElementById('classForm');
+                const department = form.querySelector('input[name="department"]:checked');
+                const section = form.querySelector('input[name="section"]:checked');
+
+                if (department && section) {
+                    form.submit();
+                } else {
+                    // Show visual feedback if selections missing
+                    if (!department) {
+                        document.querySelector('.form-section-title').style.color = '#f87171';
+                        setTimeout(() => {
+                            document.querySelector('.form-section-title').style.color = '';
+                        }, 1000);
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

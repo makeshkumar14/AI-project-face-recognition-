@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Student Dashboard - AI-Powered Face Recognition Attendance System">
+    <title>Student Dashboard | Smart Attendance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="theme-dark">
+    <!-- Animated Background -->
+    <div class="bg-animated"></div>
+
+    <!-- Dashboard Layout -->
+    <div class="dashboard">
+        <!-- Dashboard Header -->
+        <header class="dashboard-header">
+            <div class="header-left">
+                <div class="header-logo">🎯</div>
+                <div class="header-title">
+                    <h1>Student Dashboard</h1>
+                    <p>Your Attendance Overview</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <!-- Dark Mode Toggle -->
+                <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+                    <span class="theme-icon">🌙</span>
+                </button>
+                <div class="user-info">
+                    <div class="user-avatar">SK</div>
+                    <div class="user-details">
+                        <span class="user-name">Student Name</span>
+                        <span class="user-role">CSE - 3rd Year</span>
+                    </div>
+                </div>
+                <button class="btn btn-logout" onclick="logout()">
+                    <span class="btn-icon">🚪</span>
+                    Logout
+                </button>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <main class="dashboard-content">
+            <!-- Session Status Banner -->
+            <div class="session-status-banner fade-in" id="sessionStatusBanner">
+                <div class="session-status-content running">
+                    <span class="session-pulse"></span>
+                    <span class="session-status-icon">🟢</span>
+                    <div class="session-status-text">
+                        <h4>Attendance Session is Running</h4>
+                        <p>Subject: Artificial Intelligence | Prof. Sharma</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile & Face Verification Section -->
+            <div class="profile-verification-grid fade-in">
+                <!-- Student Profile Card -->
+                <div class="profile-card">
+                    <div class="profile-header">
+                        <div class="profile-avatar-large">
+                            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='35' r='25' fill='%23667eea'/%3E%3Ccircle cx='50' cy='100' r='45' fill='%23667eea'/%3E%3C/svg%3E"
+                                alt="Profile" id="profileImage">
+                            <div class="profile-avatar-overlay">
+                                <span>📷</span>
+                            </div>
+                        </div>
+                        <div class="profile-info">
+                            <h2 id="studentName">John Doe</h2>
+                            <p class="profile-subtitle">Computer Science & Engineering</p>
+                        </div>
+                    </div>
+                    <div class="profile-details">
+                        <div class="profile-detail-item">
+                            <span class="detail-icon">🎓</span>
+                            <div class="detail-content">
+                                <span class="detail-label">Roll Number</span>
+                                <span class="detail-value" id="rollNumber">CSE2023001</span>
+                            </div>
+                        </div>
+                        <div class="profile-detail-item">
+                            <span class="detail-icon">🏛️</span>
+                            <div class="detail-content">
+                                <span class="detail-label">Department</span>
+                                <span class="detail-value" id="department">Computer Science</span>
+                            </div>
+                        </div>
+                        <div class="profile-detail-item">
+                            <span class="detail-icon">📅</span>
+                            <div class="detail-content">
+                                <span class="detail-label">Academic Year</span>
+                                <span class="detail-value" id="academicYear">2025-2026</span>
+                            </div>
+                        </div>
+                        <div class="profile-detail-item">
+                            <span class="detail-icon">📧</span>
+                            <div class="detail-content">
+                                <span class="detail-label">Email</span>
+                                <span class="detail-value" id="email">john.doe@college.edu</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Face Verification Status -->
+                <div class="verification-card">
+                    <div class="verification-header">
+                        <h3>🔐 Face Verification Status</h3>
+                    </div>
+                    <div class="verification-body">
+                        <div class="verification-status verified" id="verificationStatus">
+                            <div class="verification-icon">
+                                <span class="check-animation">✓</span>
+                            </div>
+                            <h4>Face Verified Successfully</h4>
+                            <p>Your attendance has been recorded</p>
+                            <div class="verification-time">
+                                <span>⏰ Verified at: </span>
+                                <strong id="verificationTime">09:15:23 AM</strong>
+                            </div>
+                        </div>
+                        <!-- Alternate states (controlled by JS) -->
+                        <div class="verification-status not-verified" id="notVerifiedStatus" style="display: none;">
+                            <div class="verification-icon pending">
+                                <span>⏳</span>
+                            </div>
+                            <h4>Face Not Detected Yet</h4>
+                            <p>Please look at the camera when attendance is running</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Summary Cards -->
+            <div class="stats-grid slide-up delay-1">
+                <div class="stat-card stat-card-animated">
+                    <div class="stat-icon primary">
+                        <span class="stat-icon-inner">📚</span>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="totalClasses">50</h3>
+                        <p>Total Classes</p>
+                    </div>
+                    <div class="stat-trend up">
+                        <span>↑</span>
+                    </div>
+                </div>
+                <div class="stat-card stat-card-animated">
+                    <div class="stat-icon success">
+                        <span class="stat-icon-inner">✓</span>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="presentCount">46</h3>
+                        <p>Present</p>
+                    </div>
+                    <div class="stat-progress">
+                        <div class="progress-bar success" style="width: 92%"></div>
+                    </div>
+                </div>
+                <div class="stat-card stat-card-animated">
+                    <div class="stat-icon danger">
+                        <span class="stat-icon-inner">✗</span>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="absentCount">4</h3>
+                        <p>Absent</p>
+                    </div>
+                    <div class="stat-progress">
+                        <div class="progress-bar danger" style="width: 8%"></div>
+                    </div>
+                </div>
+                <div class="stat-card stat-card-animated highlight">
+                    <div class="stat-icon info">
+                        <span class="stat-icon-inner">📊</span>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="attendancePercentage">92%</h3>
+                        <p>Attendance Rate</p>
+                    </div>
+                    <div class="percentage-ring">
+                        <svg viewBox="0 0 36 36">
+                            <path class="ring-bg" d="M18 2.0845
+                                a 15.9155 15.9155 0 0 1 0 31.831
+                                a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            <path class="ring-progress" stroke-dasharray="92, 100" d="M18 2.0845
+                                a 15.9155 15.9155 0 0 1 0 31.831
+                                a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Grid -->
+            <div class="dashboard-grid">
+                <!-- Attendance History -->
+                <div class="panel-section slide-up delay-2">
+                    <div class="panel-header">
+                        <h3>
+                            <span class="panel-header-icon">📋</span>
+                            Attendance History
+                        </h3>
+                        <div class="filter-controls">
+                            <select class="filter-select" id="filterMonth">
+                                <option value="all">All Time</option>
+                                <option value="jan">January 2026</option>
+                                <option value="dec">December 2025</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="table-container enhanced-table">
+                            <table class="attendance-table">
+                                <thead>
+                                    <tr>
+                                        <th>Subject</th>
+                                        <th>Date</th>
+                                        <th>Time</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendanceHistory">
+                                    <tr class="fade-in">
+                                        <td>
+                                            <div class="subject-info">
+                                                <div class="subject-avatar"
+                                                    style="background: linear-gradient(135deg, #667eea, #764ba2);">AI
+                                                </div>
+                                                <div>
+                                                    <div class="subject-name">Artificial Intelligence</div>
+                                                    <div class="subject-teacher">Prof. Sharma</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>Jan 28, 2026</td>
+                                        <td>09:15 AM</td>
+                                        <td><span class="status-badge present"><span
+                                                    class="badge-dot"></span>Present</span></td>
+                                    </tr>
+                                    <tr class="fade-in">
+                                        <td>
+                                            <div class="subject-info">
+                                                <div class="subject-avatar"
+                                                    style="background: linear-gradient(135deg, #48bb78, #38a169);">ML
+                                                </div>
+                                                <div>
+                                                    <div class="subject-name">Machine Learning</div>
+                                                    <div class="subject-teacher">Prof. Gupta</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>Jan 27, 2026</td>
+                                        <td>10:30 AM</td>
+                                        <td><span class="status-badge present"><span
+                                                    class="badge-dot"></span>Present</span></td>
+                                    </tr>
+                                    <tr class="fade-in">
+                                        <td>
+                                            <div class="subject-info">
+                                                <div class="subject-avatar"
+                                                    style="background: linear-gradient(135deg, #f6ad55, #ed8936);">DB
+                                                </div>
+                                                <div>
+                                                    <div class="subject-name">Database Systems</div>
+                                                    <div class="subject-teacher">Prof. Kumar</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>Jan 26, 2026</td>
+                                        <td>02:00 PM</td>
+                                        <td><span class="status-badge present"><span
+                                                    class="badge-dot"></span>Present</span></td>
+                                    </tr>
+                                    <tr class="fade-in">
+                                        <td>
+                                            <div class="subject-info">
+                                                <div class="subject-avatar"
+                                                    style="background: linear-gradient(135deg, #fc8181, #f56565);">CN
+                                                </div>
+                                                <div>
+                                                    <div class="subject-name">Computer Networks</div>
+                                                    <div class="subject-teacher">Prof. Singh</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>Jan 25, 2026</td>
+                                        <td>11:00 AM</td>
+                                        <td><span class="status-badge absent"><span
+                                                    class="badge-dot"></span>Absent</span></td>
+                                    </tr>
+                                    <tr class="fade-in">
+                                        <td>
+                                            <div class="subject-info">
+                                                <div class="subject-avatar"
+                                                    style="background: linear-gradient(135deg, #63b3ed, #4299e1);">OS
+                                                </div>
+                                                <div>
+                                                    <div class="subject-name">Operating Systems</div>
+                                                    <div class="subject-teacher">Prof. Patel</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>Jan 24, 2026</td>
+                                        <td>09:00 AM</td>
+                                        <td><span class="status-badge present"><span
+                                                    class="badge-dot"></span>Present</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Notifications + Calendar -->
+                <div class="right-column-stack">
+                    <!-- Notifications Panel -->
+                    <div class="panel-section slide-up delay-3">
+                        <div class="panel-header">
+                            <h3>
+                                <span class="panel-header-icon">🔔</span>
+                                Notifications
+                                <span class="notification-badge" id="notificationCount">3</span>
+                            </h3>
+                            <button class="btn btn-sm btn-outline" onclick="markAllRead()">Mark all read</button>
+                        </div>
+                        <div class="panel-body notifications-panel" style="max-height: 200px;">
+                            <div class="notifications-list" id="notificationsList">
+                                <div class="notification-item unread success">
+                                    <div class="notification-icon">✓</div>
+                                    <div class="notification-content">
+                                        <h4>Attendance Marked</h4>
+                                        <p>Your attendance for AI class has been recorded successfully.</p>
+                                        <span class="notification-time">2 minutes ago</span>
+                                    </div>
+                                </div>
+                                <div class="notification-item unread info">
+                                    <div class="notification-icon">📢</div>
+                                    <div class="notification-content">
+                                        <h4>Session Started</h4>
+                                        <p>Attendance session for Machine Learning has started.</p>
+                                        <span class="notification-time">10 minutes ago</span>
+                                    </div>
+                                </div>
+                                <div class="notification-item unread warning">
+                                    <div class="notification-icon">⚠️</div>
+                                    <div class="notification-content">
+                                        <h4>Low Attendance Alert</h4>
+                                        <p>Your attendance in Computer Networks is below 75%.</p>
+                                        <span class="notification-time">1 hour ago</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Monthly Calendar (Compact) -->
+                    <div class="panel-section slide-up delay-4">
+                        <div class="panel-header">
+                            <h3>
+                                <span class="panel-header-icon">📅</span>
+                                <span id="calendarMonthYear">January 2026</span>
+                            </h3>
+                            <div class="calendar-nav">
+                                <button class="btn btn-sm btn-outline" onclick="changeMonth(-1)">‹</button>
+                                <button class="btn btn-sm btn-outline" onclick="changeMonth(1)">›</button>
+                            </div>
+                        </div>
+                        <div class="panel-body">
+                            <div class="mini-calendar" id="miniCalendar">
+                                <div class="calendar-weekdays">
+                                    <span>Su</span>
+                                    <span>Mo</span>
+                                    <span>Tu</span>
+                                    <span>We</span>
+                                    <span>Th</span>
+                                    <span>Fr</span>
+                                    <span>Sa</span>
+                                </div>
+                                <div class="calendar-days" id="calendarDays">
+                                    <!-- Days populated by JS -->
+                                </div>
+                            </div>
+                            <div class="calendar-legend">
+                                <span class="legend-item"><span class="legend-dot present"></span> Present</span>
+                                <span class="legend-item"><span class="legend-dot absent"></span> Absent</span>
+                                <span class="legend-item"><span class="legend-dot today"></span> Today</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="dashboard-footer">
+            <p>© 2026 Smart Attendance System | AI-Powered Face Recognition</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+
+</html>

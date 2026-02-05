@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Faculty Login - AI-Powered Face Recognition Attendance System">
+    <title>Faculty Login | Smart Attendance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <!-- Animated Background -->
+    <div class="bg-animated"></div>
+
+    <!-- Login Container -->
+    <div class="login-container">
+        <div class="login-card fade-in">
+            <!-- Login Header -->
+            <div class="login-header">
+                <div class="login-header-icon">
+                    👨‍🏫
+                </div>
+                <h2>Faculty Login</h2>
+                <p>Access your attendance dashboard</p>
+            </div>
+
+            <!-- Login Form -->
+            <form class="login-form" action="{{ url_for('faculty_login') }}" method="POST">
+                <div class="form-group">
+                    <label class="form-label" for="facultyId">Faculty ID / Email</label>
+                    <input type="text" id="facultyId" name="faculty_id" class="form-input"
+                        placeholder="Enter your faculty ID or email" required autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input type="password" id="password" name="password" class="form-input"
+                        placeholder="Enter your password" required autocomplete="current-password">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <span class="btn-icon">🔐</span>
+                    Login to Dashboard
+                </button>
+            </form>
+
+            <!-- Login Footer -->
+            <div class="login-footer">
+                <p>Not a faculty member? <a href="{{ url_for('student_login') }}">Student Login</a></p>
+                <p class="mt-2"><a href="{{ url_for('role_select') }}">← Back to Home</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+
+</html>

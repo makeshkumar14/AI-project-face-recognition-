@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Faculty Dashboard - AI-Powered Face Recognition Attendance System" />
+    <title>Faculty Dashboard | Smart Attendance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+
+<body class="theme-dark">
+    <!-- Animated Background -->
+    <div class="bg-animated"></div>
+
+    <!-- Dashboard Layout -->
+    <div class="dashboard">
+        <!-- Dashboard Header -->
+        <header class="dashboard-header">
+            <div class="header-left">
+                <div class="header-brand">
+                    <span class="header-logo-icon">⚡</span>
+                    <span class="header-brand-text">SmartAttend</span>
+                </div>
+            </div>
+            <div class="header-center">
+                <nav class="header-nav">
+                    <span class="nav-item active">Dashboard</span>
+                    <span class="nav-item">Attendance</span>
+                    <span class="nav-item">Reports</span>
+                    <span class="nav-item">Settings</span>
+                </nav>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <div class="user-avatar">FK</div>
+                    <div class="user-details">
+                        <span class="user-name">Prof. Faculty</span>
+                        <span class="user-role">Department of CSE</span>
+                    </div>
+                </div>
+                <button class="btn btn-outline theme-toggle-btn" onclick="toggleTheme()">
+                    <span class="theme-icon">🌙</span>
+                </button>
+                <button class="btn btn-logout" onclick="logout()">
+                    <span class="btn-icon">🚪</span>
+                    Logout
+                </button>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <main class="dashboard-content">
+            <!-- Session Info Banner -->
+            <div class="session-banner fade-in" id="sessionBanner">
+                <div class="session-info-grid">
+                    <div class="session-item">
+                        <span class="session-label">📚 Subject</span>
+                        <span class="session-value" id="sessionSubject">{{ session.get('current_subject', 'Not
+                            Selected') }}</span>
+                    </div>
+                    <div class="session-item">
+                        <span class="session-label">🏛️ Dept-Sec</span>
+                        <span class="session-value" id="sessionDeptSec">{{ session.get('current_department', 'CSE') }} -
+                            {{ session.get('current_section', 'A') }}</span>
+                    </div>
+                    <div class="session-item">
+                        <span class="session-label">📅 Date</span>
+                        <span class="session-value" id="sessionDate">--</span>
+                    </div>
+                    <div class="session-item">
+                        <span class="session-label">🕐 Time</span>
+                        <span class="session-value" id="currentTime">--:--</span>
+                    </div>
+                    <div class="session-item">
+                        <span class="session-label">📊 Status</span>
+                        <span class="session-status-badge stopped" id="sessionStatusBadge">
+                            <span class="status-dot-mini"></span>
+                            Stopped
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Status Indicators -->
+            <div class="live-status-grid fade-in">
+                <div class="live-status-card">
+                    <div class="live-status-icon camera" id="cameraStatusIcon">
+                        <span>📷</span>
+                    </div>
+                    <div class="live-status-info">
+                        <h4>Camera Status</h4>
+                        <p id="cameraStatus" class="status-inactive">Inactive</p>
+                    </div>
+                </div>
+                <div class="live-status-card">
+                    <div class="live-status-icon faces">
+                        <span>👤</span>
+                    </div>
+                    <div class="live-status-info">
+                        <h4>Faces Detected</h4>
+                        <p id="facesDetected" class="live-count">0</p>
+                    </div>
+                </div>
+                <div class="live-status-card">
+                    <div class="live-status-icon marked">
+                        <span>✓</span>
+                    </div>
+                    <div class="live-status-info">
+                        <h4>Students Marked</h4>
+                        <p id="studentsMarked" class="live-count">0</p>
+                    </div>
+                </div>
+                <div class="live-status-card">
+                    <div class="live-status-icon total">
+                        <span>👥</span>
+                    </div>
+                    <div class="live-status-info">
+                        <h4>Total Students</h4>
+                        <p id="totalStudents" class="live-count">45</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Dashboard Grid - 2 Column Layout (Control + Webcam) -->
+            <div class="dashboard-grid-2col">
+                <!-- Control Panel -->
+                <div class="panel-section slide-up delay-1">
+                    <div class="panel-header">
+                        <h3>
+                            <span class="panel-header-icon">🎮</span>
+                            Control Panel
+                        </h3>
+                    </div>
+                    <div class="panel-body">
+                        <!-- Control Buttons -->
+                        <div class="control-buttons-vertical">
+                            <button id="startAttendance" class="btn btn-success btn-block">
+                                <span class="btn-icon">▶️</span>
+                                Start Attendance
+                            </button>
+                            <button id="stopAttendance" class="btn btn-danger btn-block" disabled>
+                                <span class="btn-icon">⏹️</span>
+                                Stop Attendance
+                            </button>
+                            <button id="resetSession" class="btn btn-warning btn-block" onclick="resetSession()">
+                                <span class="btn-icon">🔄</span>
+                                Reset Session
+                            </button>
+                        </div>
+
+                        <!-- Status Indicator -->
+                        <div class="status-indicator-enhanced" id="statusIndicator">
+                            <div class="status-dot stopped"></div>
+                            <div class="status-text">
+                                <h4>Attendance Stopped</h4>
+                                <p>Click "Start Attendance" to begin face recognition</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Webcam Preview - Expanded -->
+                <div class="panel-section slide-up delay-2 webcam-panel webcam-panel-expanded">
+                    <div class="panel-header">
+                        <h3>
+                            <span class="panel-header-icon">📷</span>
+                            Live Webcam Feed
+                        </h3>
+                        <div class="webcam-controls">
+                            <span class="fps-indicator" id="fpsIndicator">-- FPS</span>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="webcam-container webcam-container-large" id="webcamContainer">
+                            <!-- Live Badge -->
+                            <div class="webcam-live-badge">
+                                <span class="live-dot"></span>
+                                LIVE
+                            </div>
+
+                            <!-- Face Detection Overlay -->
+                            <div class="face-detection-overlay" id="faceOverlay">
+                                <div class="detected-face-box"></div>
+                            </div>
+
+                            <!-- Placeholder -->
+                            <div class="webcam-placeholder">
+                                <div class="webcam-placeholder-icon">📷</div>
+                                <p>Camera feed will appear here</p>
+                                <p class="text-muted" style="font-size: 0.875rem; margin-top: 8px">
+                                    Start attendance to activate webcam
+                                </p>
+                            </div>
+
+                            <!-- Video Stream from Flask Backend -->
+                            <img id="webcamFeed" src="" alt="Camera Feed" style="
+                    display: none;
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                    border-radius: 8px;
+                  " />
+                        </div>
+
+                        <!-- Recognition Feed -->
+                        <div class="recognition-feed" id="recognitionFeed">
+                            <div class="recognition-item fade-in">
+                                <span class="recognition-icon">👤</span>
+                                <span class="recognition-text">Waiting for face detection...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Section - Two Column Layout -->
+            <div class="attendance-dual-layout mt-4 slide-up delay-4">
+                <!-- Present Students Column -->
+                <div class="panel-section present-panel">
+                    <div class="panel-header present-header">
+                        <h3>
+                            <span class="panel-header-icon">✅</span>
+                            Present Students
+                            <span class="attendance-count-badge present-badge" id="presentCountBadge">0</span>
+                        </h3>
+                        <div class="table-actions">
+                            <div class="search-box">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" id="searchPresent" class="search-input" placeholder="Search..." />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="table-container enhanced-table">
+                            <table class="attendance-table">
+                                <thead>
+                                    <tr>
+                                        <th>Student</th>
+                                        <th>Roll No.</th>
+                                        <th>Time</th>
+                                        <th>Confidence</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="presentData">
+                                    <!-- Present students populated by JS -->
+                                </tbody>
+                            </table>
+                            <!-- Empty State -->
+                            <div class="empty-state" id="presentEmptyState">
+                                <div class="empty-icon">✅</div>
+                                <h4>No Present Students Yet</h4>
+                                <p>Start the session to mark attendance</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Absent Students Column -->
+                <div class="panel-section absent-panel">
+                    <div class="panel-header absent-header">
+                        <h3>
+                            <span class="panel-header-icon">❌</span>
+                            Absent Students
+                            <span class="attendance-count-badge absent-badge" id="absentCountBadge">0</span>
+                        </h3>
+                        <div class="table-actions">
+                            <div class="search-box">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" id="searchAbsent" class="search-input" placeholder="Search..." />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="table-container enhanced-table">
+                            <table class="attendance-table">
+                                <thead>
+                                    <tr>
+                                        <th>Student</th>
+                                        <th>Roll No.</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="absentData">
+                                    <!-- Absent students populated by JS -->
+                                </tbody>
+                            </table>
+                            <!-- Empty State -->
+                            <div class="empty-state" id="absentEmptyState">
+                                <div class="empty-icon">🎉</div>
+                                <h4>No Absent Students</h4>
+                                <p>All students are present!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Actions -->
+            <div class="panel-section mt-4 slide-up delay-5">
+                <div class="panel-header">
+                    <h3>
+                        <span class="panel-header-icon">📊</span>
+                        Actions
+                    </h3>
+                </div>
+                <div class="panel-body">
+                    <div class="action-buttons-row">
+                        <button class="btn btn-primary" onclick="exportAttendance()">
+                            <span class="btn-icon">📥</span>
+                            Export CSV
+                        </button>
+                        <button class="btn btn-outline" onclick="simulateRecognition()">
+                            <span class="btn-icon">➕</span>
+                            Simulate Recognition
+                        </button>
+                        <button class="btn btn-success" onclick="markAllPresent()">
+                            <span class="btn-icon">✓</span>
+                            Mark All Present
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="dashboard-footer">
+            <p>© 2026 Smart Attendance System | AI-Powered Face Recognition</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+
+</html>

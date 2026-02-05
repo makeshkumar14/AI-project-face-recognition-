@@ -1,0 +1,18 @@
+# Face Recognition Attendance System - Requirements
+# Python 3.9+ required
+
+# Core Flask dependencies
+Flask>=2.3.0
+flask-cors>=4.0.0
+Werkzeug>=2.3.0
+
+# Computer Vision (REQUIRED)
+opencv-python>=4.8.0
+numpy>=1.24.0
+
+# Face Recognition (OPTIONAL - for advanced recognition)
+# Uncomment below if you can install dlib (requires Visual C++ Build Tools)
+# face_recognition>=1.3.0
+
+# Database
+# SQLite is built into Python, no external package needed

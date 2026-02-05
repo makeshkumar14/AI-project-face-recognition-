@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Section & Department Selection - AI-Powered Face Recognition Attendance System">
+    <title>Select Section & Department | Smart Attendance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Section Selection Specific Styles */
+        .section-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .section-card {
+            background: rgba(30, 30, 50, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 3rem;
+            width: 100%;
+            max-width: 650px;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .section-header-icon {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .section-header h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+
+        .section-header p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.95rem;
+        }
+
+        .selected-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .selected-info-icon {
+            font-size: 2rem;
+        }
+
+        .selected-info-text h4 {
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .selected-info-text p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.85rem;
+        }
+
+        .form-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .select-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .select-option {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .select-option:hover {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .select-option.selected {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: #6366f1;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+        }
+
+        .select-option input[type="radio"] {
+            display: none;
+        }
+
+        .select-option-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .select-option-name {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .section-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .section-actions .btn {
+            flex: 1;
+        }
+
+        /* Department colors */
+        .dept-cse .select-option-icon {
+            color: #6366f1;
+        }
+
+        .dept-ece .select-option-icon {
+            color: #10b981;
+        }
+
+        .dept-eee .select-option-icon {
+            color: #f59e0b;
+        }
+
+        .dept-mech .select-option-icon {
+            color: #ef4444;
+        }
+
+        .dept-civil .select-option-icon {
+            color: #8b5cf6;
+        }
+
+        .dept-it .select-option-icon {
+            color: #3b82f6;
+        }
+
+        @media (max-width: 500px) {
+            .select-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .section-card {
+                padding: 2rem;
+            }
+        }
+    </style>
+</head>
+
+<body class="theme-dark">
+    <!-- Animated Background -->
+    <div class="bg-animated"></div>
+
+    <!-- Section Selection Container -->
+    <div class="section-container">
+        <div class="section-card fade-in">
+            <!-- Selected Subject Info -->
+            <div class="selected-info">
+                <span class="selected-info-icon">📚</span>
+                <div class="selected-info-text">
+                    <h4>Selected Subject</h4>
+                    <p>{{ session.get('current_subject', 'Not Selected') }}</p>
+                </div>
+            </div>
+
+            <!-- Header -->
+            <div class="section-header">
+                <span class="section-header-icon">🏛️</span>
+                <h2>Select Department & Section</h2>
+                <p>Choose the department and section for attendance</p>
+            </div>
+
+            <!-- Selection Form -->
+            <form action="{{ url_for('select_section') }}" method="POST" id="sectionForm">
+                <!-- Department Selection -->
+                <div class="form-section">
+                    <div class="form-section-title">📋 Department</div>
+                    <div class="select-grid">
+                        <label class="select-option dept-cse" for="dept-cse">
+                            <input type="radio" name="department" id="dept-cse" value="CSE" required>
+                            <span class="select-option-icon">💻</span>
+                            <div class="select-option-name">CSE</div>
+                        </label>
+
+                        <label class="select-option dept-it" for="dept-it">
+                            <input type="radio" name="department" id="dept-it" value="IT">
+                            <span class="select-option-icon">🌐</span>
+                            <div class="select-option-name">IT</div>
+                        </label>
+
+                        <label class="select-option dept-ece" for="dept-ece">
+                            <input type="radio" name="department" id="dept-ece" value="ECE">
+                            <span class="select-option-icon">📡</span>
+                            <div class="select-option-name">ECE</div>
+                        </label>
+
+                        <label class="select-option dept-eee" for="dept-eee">
+                            <input type="radio" name="department" id="dept-eee" value="EEE">
+                            <span class="select-option-icon">⚡</span>
+                            <div class="select-option-name">EEE</div>
+                        </label>
+
+                        <label class="select-option dept-mech" for="dept-mech">
+                            <input type="radio" name="department" id="dept-mech" value="MECH">
+                            <span class="select-option-icon">⚙️</span>
+                            <div class="select-option-name">MECH</div>
+                        </label>
+
+                        <label class="select-option dept-civil" for="dept-civil">
+                            <input type="radio" name="department" id="dept-civil" value="CIVIL">
+                            <span class="select-option-icon">🏗️</span>
+                            <div class="select-option-name">CIVIL</div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Section Selection -->
+                <div class="form-section">
+                    <div class="form-section-title">👥 Section</div>
+                    <div class="select-grid">
+                        <label class="select-option" for="section-a">
+                            <input type="radio" name="section" id="section-a" value="A" required>
+                            <span class="select-option-icon">🅰️</span>
+                            <div class="select-option-name">Section A</div>
+                        </label>
+
+                        <label class="select-option" for="section-b">
+                            <input type="radio" name="section" id="section-b" value="B">
+                            <span class="select-option-icon">🅱️</span>
+                            <div class="select-option-name">Section B</div>
+                        </label>
+
+                        <label class="select-option" for="section-c">
+                            <input type="radio" name="section" id="section-c" value="C">
+                            <span class="select-option-icon">©️</span>
+                            <div class="select-option-name">Section C</div>
+                        </label>
+
+                        <label class="select-option" for="section-d">
+                            <input type="radio" name="section" id="section-d" value="D">
+                            <span class="select-option-icon">🇩</span>
+                            <div class="select-option-name">Section D</div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="section-actions">
+                    <a href="{{ url_for('select_subject') }}" class="btn btn-outline">
+                        <span class="btn-icon">←</span>
+                        Back
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <span class="btn-icon">▶️</span>
+                        Start Attendance
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Handle selection visual feedback
+        document.querySelectorAll('.select-option').forEach(option => {
+            option.addEventListener('click', function () {
+                // Get the parent form-section
+                const formSection = this.closest('.form-section');
+                // Remove selected class from siblings in the same section
+                formSection.querySelectorAll('.select-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                // Add selected class to clicked option
+                this.classList.add('selected');
+            });
+        });
+    </script>
+</body>
+
+</html>
