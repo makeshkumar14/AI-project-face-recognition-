@@ -27,6 +27,11 @@ CASCADE_PATH = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
 # Face recognition tolerance (lower = more strict, recommended: 0.4-0.6)
 TOLERANCE = 0.5
 
+# LBPH confidence threshold (lower = stricter matching)
+# Typical LBPH distance: 0-50 = good match, 50-90 = possible match, >120 = poor match
+# Higher threshold needed when: glasses, lighting variations, different angles
+LBPH_THRESHOLD = 120
+
 
 class FaceRecognitionManager:
     """
@@ -43,6 +48,11 @@ class FaceRecognitionManager:
         self.is_loaded = False
         self.face_cascade = cv2.CascadeClassifier(CASCADE_PATH)
         self.recognized_this_session = set()  # Track who's been recognized
+        
+        # OpenCV LBPH Face Recognizer for fallback mode
+        self.lbph_recognizer = cv2.face.LBPHFaceRecognizer_create()
+        self.lbph_trained = False
+        self.label_to_index = {}  # Maps LBPH labels to student indices
     
     def load_known_faces(self):
         """
@@ -76,8 +86,8 @@ class FaceRecognitionManager:
                 student_name = student_folder.replace('_', ' ')
                 roll_no = student_folder
             
-            # Find image files in the folder
-            image_loaded = False
+            # Find ALL image files in the folder and load them
+            images_loaded = 0
             for filename in os.listdir(folder_path):
                 if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
                     image_path = os.path.join(folder_path, filename)
@@ -92,11 +102,11 @@ class FaceRecognitionManager:
                                 self.known_face_encodings.append(face_encodings[0])
                                 self.known_face_names.append(student_name)
                                 self.known_roll_numbers.append(roll_no)
-                                image_loaded = True
-                                print(f"Loaded face (face_recognition): {student_name} ({roll_no})")
-                                break
+                                images_loaded += 1
+                                print(f"Loaded face (face_recognition): {student_name} ({roll_no}) - {filename}")
+                                # Continue loading more images for this person
                         else:
-                            # OpenCV fallback - just store the image for template matching
+                            # OpenCV fallback - use LBPH face recognizer
                             image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
                             if image is not None:
                                 # Detect face in the image
@@ -104,20 +114,42 @@ class FaceRecognitionManager:
                                 if len(faces) > 0:
                                     x, y, w, h = faces[0]
                                     face_roi = image[y:y+h, x:x+w]
-                                    face_roi = cv2.resize(face_roi, (100, 100))
+                                    face_roi = cv2.resize(face_roi, (150, 150))
                                     self.known_face_encodings.append(face_roi)
                                     self.known_face_names.append(student_name)
                                     self.known_roll_numbers.append(roll_no)
-                                    image_loaded = True
-                                    print(f"Loaded face (OpenCV): {student_name} ({roll_no})")
-                                    break
+                                    images_loaded += 1
+                                    print(f"Loaded face (OpenCV LBPH): {student_name} ({roll_no}) - {filename}")
+                                    # Continue loading more images for this person
                     except Exception as e:
                         print(f"Error loading {image_path}: {e}")
             
-            if not image_loaded and os.path.isdir(folder_path):
+            if images_loaded == 0 and os.path.isdir(folder_path):
                 print(f"Warning: No valid face image for {student_folder}")
+            elif images_loaded > 0:
+                print(f"Loaded {images_loaded} image(s) for {student_name}")
         
         self.is_loaded = len(self.known_face_encodings) > 0
+        
+        # Train LBPH recognizer if we have faces and face_recognition is not available
+        if self.is_loaded and not FACE_RECOGNITION_AVAILABLE:
+            try:
+                # Create labels (0, 1, 2, ...) for each person
+                labels = []
+                faces_for_training = []
+                for i, face_img in enumerate(self.known_face_encodings):
+                    labels.append(i)
+                    faces_for_training.append(face_img)
+                    self.label_to_index[i] = i
+                
+                # Train the LBPH recognizer
+                self.lbph_recognizer.train(faces_for_training, np.array(labels))
+                self.lbph_trained = True
+                print(f"LBPH recognizer trained with {len(faces_for_training)} faces")
+            except Exception as e:
+                print(f"Error training LBPH recognizer: {e}")
+                self.lbph_trained = False
+        
         print(f"Loaded {len(self.known_face_encodings)} known faces")
         return self.is_loaded
     
@@ -171,27 +203,42 @@ class FaceRecognitionManager:
                             'confidence': confidence
                         })
         else:
-            # OpenCV fallback - just detect faces
+            # OpenCV fallback - use LBPH face recognizer
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             faces = self.face_cascade.detectMultiScale(gray, 1.3, 5, minSize=(50, 50))
             
-            for i, (x, y, w, h) in enumerate(faces):
-                # For demo purposes, assign detected faces to known students
-                # In a real system, you'd use more sophisticated matching
-                if self.is_loaded and i < len(self.known_face_names):
-                    name = self.known_face_names[i]
-                    roll_no = self.known_roll_numbers[i]
-                    confidence = 95.0  # Simulated confidence for detection-only mode
-                elif self.is_loaded and len(self.known_face_names) > 0:
-                    # Cycle through known faces for demo
-                    idx = i % len(self.known_face_names)
-                    name = self.known_face_names[idx]
-                    roll_no = self.known_roll_numbers[idx]
-                    confidence = 90.0
-                else:
-                    name = f"Unknown"
-                    roll_no = f"UNKNOWN_{i+1}"
-                    confidence = 0.0
+            for (x, y, w, h) in faces:
+                # Extract and resize face region for recognition
+                face_roi = gray[y:y+h, x:x+w]
+                face_roi_resized = cv2.resize(face_roi, (150, 150))
+                
+                name = "Unknown"
+                roll_no = "UNKNOWN"
+                confidence = 0.0
+                
+                # Use LBPH recognizer if trained
+                if self.lbph_trained and self.is_loaded:
+                    try:
+                        # Predict the label and confidence
+                        label, lbph_confidence = self.lbph_recognizer.predict(face_roi_resized)
+                        
+                        # LBPH confidence is distance (lower = better match)
+                        # Typical LBPH distance: 0-40 = good, 40-70 = possible, >70 = poor
+                        # Only accept matches with low enough distance
+                        if lbph_confidence < LBPH_THRESHOLD:
+                            if label in self.label_to_index:
+                                idx = self.label_to_index[label]
+                                if idx < len(self.known_face_names):
+                                    name = self.known_face_names[idx]
+                                    roll_no = self.known_roll_numbers[idx]
+                                    # Convert distance to confidence percentage
+                                    # Lower distance = higher confidence
+                                    confidence = round(max(0, min(100, (LBPH_THRESHOLD - lbph_confidence) * 100 / LBPH_THRESHOLD)), 1)
+                        else:
+                            # Distance too high - this is not a match
+                            print(f"Face detected but no match (distance: {lbph_confidence:.1f})")
+                    except Exception as e:
+                        print(f"LBPH prediction error: {e}")
                 
                 # Location format: (top, right, bottom, left)
                 location = (y, x + w, y + h, x)
@@ -273,9 +320,10 @@ def draw_face_boxes(frame, recognized_faces):
         confidence = face['confidence']
         
         # Color based on confidence
-        if confidence >= 90:
-            color = (0, 255, 0)  # Green - high confidence
-        elif confidence >= 70:
+        # LBPH typically gives lower confidence values, so use lower thresholds
+        if confidence >= 50:
+            color = (0, 255, 0)  # Green - good confidence
+        elif confidence >= 30:
             color = (0, 255, 255)  # Yellow - medium confidence
         else:
             color = (0, 0, 255)  # Red - low/unknown
