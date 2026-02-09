@@ -166,42 +166,63 @@ class FaceRecognitionManager:
         """
         recognized = []
         
+        # Safety check for None frame
+        if frame is None:
+            return recognized
+        
+        try:
+            # Resize frame to 640x480 to avoid memory issues
+            frame = cv2.resize(frame, (640, 480))
+        except Exception as e:
+            print(f"Error resizing frame: {e}")
+            return recognized
+        
         if FACE_RECOGNITION_AVAILABLE and self.is_loaded:
-            # Use face_recognition library
-            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            small_frame = cv2.resize(rgb_frame, (0, 0), fx=0.25, fy=0.25)
-            
-            face_locations = face_recognition.face_locations(small_frame)
-            face_encodings = face_recognition.face_encodings(small_frame, face_locations)
-            
-            for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
-                matches = face_recognition.compare_faces(
-                    self.known_face_encodings, 
-                    face_encoding, 
-                    tolerance=TOLERANCE
-                )
+            try:
+                # Convert BGR to RGB for face_recognition library
+                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                # Scale down for faster processing
+                small_frame = cv2.resize(rgb_frame, (0, 0), fx=0.25, fy=0.25)
                 
-                face_distances = face_recognition.face_distance(
-                    self.known_face_encodings, 
-                    face_encoding
-                )
+                # Detect face locations first
+                face_locations = face_recognition.face_locations(small_frame)
                 
-                if len(face_distances) > 0 and True in matches:
-                    best_match_index = np.argmin(face_distances)
+                # Only run face_encodings if faces are found (prevents crash)
+                if len(face_locations) == 0:
+                    return recognized
+                
+                face_encodings = face_recognition.face_encodings(small_frame, face_locations)
+                
+                for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
+                    matches = face_recognition.compare_faces(
+                        self.known_face_encodings, 
+                        face_encoding, 
+                        tolerance=TOLERANCE
+                    )
                     
-                    if matches[best_match_index]:
-                        name = self.known_face_names[best_match_index]
-                        roll_no = self.known_roll_numbers[best_match_index]
-                        distance = face_distances[best_match_index]
-                        confidence = round((1 - distance) * 100, 1)
-                        location = (top * 4, right * 4, bottom * 4, left * 4)
+                    face_distances = face_recognition.face_distance(
+                        self.known_face_encodings, 
+                        face_encoding
+                    )
+                    
+                    if len(face_distances) > 0 and True in matches:
+                        best_match_index = np.argmin(face_distances)
                         
-                        recognized.append({
-                            'name': name,
-                            'roll_no': roll_no,
-                            'location': location,
-                            'confidence': confidence
-                        })
+                        if matches[best_match_index]:
+                            name = self.known_face_names[best_match_index]
+                            roll_no = self.known_roll_numbers[best_match_index]
+                            distance = face_distances[best_match_index]
+                            confidence = round((1 - distance) * 100, 1)
+                            location = (top * 4, right * 4, bottom * 4, left * 4)
+                            
+                            recognized.append({
+                                'name': name,
+                                'roll_no': roll_no,
+                                'location': location,
+                                'confidence': confidence
+                            })
+            except Exception as e:
+                print(f"Face recognition error: {e}")
         else:
             # OpenCV fallback - use LBPH face recognizer
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -285,35 +306,52 @@ class WebcamCapture:
                 self.cap = cv2.VideoCapture(self.camera_index, backend)
                 
                 if self.cap.isOpened():
-                    # Test if we can actually grab a frame
-                    ret, _ = self.cap.read()
-                    if ret:
+                    # Set MJPG codec first (more reliable on Windows, avoids corruption)
+                    fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+                    self.cap.set(cv2.CAP_PROP_FOURCC, fourcc)
+                    
+                    # Set resolution and FPS before grabbing frames
+                    self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                    self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                    self.cap.set(cv2.CAP_PROP_FPS, 30)
+                    self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                    
+                    # Flush a few frames to clear the buffer
+                    for _ in range(5):
+                        self.cap.read()
+                    
+                    # Test if we can actually grab a valid frame
+                    ret, test_frame = self.cap.read()
+                    if ret and test_frame is not None and test_frame.size > 0:
                         print(f"Camera opened successfully with {name} backend")
+                        print(f"Frame size: {test_frame.shape}")
                         break
                     else:
                         self.cap.release()
-                        print(f"{name} backend opened but couldn't grab frame")
+                        print(f"{name} backend opened but couldn't grab valid frame")
                 else:
                     print(f"{name} backend failed to open camera")
-            
-            if self.cap and self.cap.isOpened():
-                # Set camera properties for better performance
-                self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-                self.cap.set(cv2.CAP_PROP_FPS, 30)
-                # Add buffer size to reduce latency
-                self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         
         self.is_running = self.cap is not None and self.cap.isOpened()
         return self.is_running
     
     def read_frame(self):
-        """Read a frame from the webcam."""
-        if self.cap and self.cap.isOpened():
+        """Read a frame from the webcam with safety checks."""
+        if self.cap is None or not self.cap.isOpened():
+            return None
+        
+        try:
             ret, frame = self.cap.read()
-            if ret:
-                return frame
-        return None
+            # Always check ret before processing frame
+            if not ret or frame is None:
+                return None
+            
+            # Resize frame to 640x480 to avoid memory crash
+            frame = cv2.resize(frame, (640, 480))
+            return frame
+        except Exception as e:
+            print(f"Error reading frame: {e}")
+            return None
     
     def stop(self):
         """Stop the webcam capture."""
@@ -384,7 +422,7 @@ def draw_face_boxes(frame, recognized_faces):
 face_manager = FaceRecognitionManager()
 
 
-# Testing function
+# Testing function (standalone mode only - uses cv2.imshow)
 if __name__ == '__main__':
     print("Testing Face Recognition Module...")
     print(f"face_recognition available: {FACE_RECOGNITION_AVAILABLE}")
@@ -397,27 +435,40 @@ if __name__ == '__main__':
     
     # Test with webcam
     cam = WebcamCapture()
-    if cam.start():
-        print("\nWebcam started. Press 'q' to quit.")
-        
-        while cam.is_running:
-            frame = cam.read_frame()
-            if frame is None:
-                continue
+    try:
+        if cam.start():
+            print("\nWebcam started. Press 'q' to quit.")
             
-            # Recognize faces
-            recognized = face_manager.recognize_faces(frame)
-            
-            # Draw boxes
-            frame = draw_face_boxes(frame, recognized)
-            
-            # Display
-            cv2.imshow('Face Recognition Test', frame)
-            
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-        
+            while cam.is_running:
+                frame = cam.read_frame()
+                
+                # Check if frame is valid
+                if frame is None:
+                    cv2.waitKey(10)  # Small delay to reduce CPU usage
+                    continue
+                
+                # Recognize faces
+                recognized = face_manager.recognize_faces(frame)
+                
+                # Draw boxes
+                frame = draw_face_boxes(frame, recognized)
+                
+                # Display (only in standalone test mode)
+                cv2.imshow('Face Recognition Test', frame)
+                
+                # Add small waitKey delay to reduce CPU usage and check for 'q' key
+                key = cv2.waitKey(30) & 0xFF
+                if key == ord('q'):
+                    print("'q' pressed - exiting...")
+                    break
+        else:
+            print("Failed to start webcam")
+    except KeyboardInterrupt:
+        print("\nInterrupted by user")
+    except Exception as e:
+        print(f"Error during testing: {e}")
+    finally:
+        # Always release camera and destroy windows
         cam.stop()
         cv2.destroyAllWindows()
-    else:
-        print("Failed to start webcam")
+        print("Camera released and windows closed")

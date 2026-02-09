@@ -222,7 +222,7 @@ function startAttendance() {
         // Hide placeholder and show camera feed
         const placeholder = document.querySelector(".webcam-placeholder");
         const webcamFeed = document.getElementById("webcamFeed");
-        
+
         if (placeholder) placeholder.style.display = "none";
         if (webcamFeed) {
           webcamFeed.src = "/video_feed";
@@ -253,13 +253,13 @@ let recognitionPollingInterval = null;
 
 function startRecognitionPolling() {
   if (recognitionPollingInterval) clearInterval(recognitionPollingInterval);
-  
+
   recognitionPollingInterval = setInterval(() => {
     if (!isAttendanceRunning) {
       clearInterval(recognitionPollingInterval);
       return;
     }
-    
+
     // Fetch current attendance data
     loadAttendanceData();
   }, 2000); // Poll every 2 seconds
@@ -312,7 +312,7 @@ function stopAttendance() {
       // Hide camera feed and show placeholder
       const placeholder = document.querySelector(".webcam-placeholder");
       const webcamFeed = document.getElementById("webcamFeed");
-      
+
       if (webcamFeed) {
         webcamFeed.src = "";
         webcamFeed.style.display = "none";
@@ -471,56 +471,40 @@ function startFaceDetectionSimulation() {
 function loadAttendanceData() {
   const presentBody = document.getElementById("presentData");
   const absentBody = document.getElementById("absentData");
+  const totalStudentsEl = document.getElementById("totalStudents");
 
   if (!presentBody && !absentBody) return;
 
-  // Sample student data - all students in the class (15+ names)
-  const allStudents = [
-    { id: "CSE001", name: "Rahul Kumar" },
-    { id: "CSE002", name: "Priya Sharma" },
-    { id: "CSE003", name: "Amit Singh" },
-    { id: "CSE004", name: "Sneha Patel" },
-    { id: "CSE005", name: "Vikram Reddy" },
-    { id: "CSE006", name: "Ananya Iyer" },
-    { id: "CSE007", name: "Rohan Mehta" },
-    { id: "CSE008", name: "Kavya Nair" },
-    { id: "CSE009", name: "Siddharth Joshi" },
-    { id: "CSE010", name: "Divya Krishnan" },
-    { id: "CSE011", name: "Arjun Verma" },
-    { id: "CSE012", name: "Neha Gupta" },
-    { id: "CSE013", name: "Mohammed Ali" },
-    { id: "CSE014", name: "Pooja Reddy" },
-    { id: "CSE015", name: "Karthik Sundaram" },
-  ];
+  // Fetch attendance data from backend API
+  fetch("/api/attendance_data")
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success) {
+        // Update total students count
+        if (totalStudentsEl) {
+          totalStudentsEl.textContent = data.total;
+        }
 
-  // Initial present students (mixed demo data - 8 present, 7 absent)
-  const presentStudents = [
-    { id: "CSE001", name: "Rahul Kumar", time: "09:15 AM", confidence: 98.5 },
-    { id: "CSE003", name: "Amit Singh", time: "09:18 AM", confidence: 97.2 },
-    { id: "CSE005", name: "Vikram Reddy", time: "09:22 AM", confidence: 99.1 },
-    { id: "CSE006", name: "Ananya Iyer", time: "09:25 AM", confidence: 96.8 },
-    { id: "CSE008", name: "Kavya Nair", time: "09:28 AM", confidence: 98.2 },
-    { id: "CSE010", name: "Divya Krishnan", time: "09:31 AM", confidence: 97.5 },
-    { id: "CSE012", name: "Neha Gupta", time: "09:35 AM", confidence: 99.3 },
-    { id: "CSE015", name: "Karthik Sundaram", time: "09:40 AM", confidence: 96.1 },
-  ];
+        // Store in global for later use
+        window.attendanceData = {
+          present: data.present,
+          absent: data.absent,
+          total: data.total,
+        };
 
-  // Absent students are those not in presentStudents
-  const presentIds = presentStudents.map((s) => s.id);
-  const absentStudents = allStudents.filter((s) => !presentIds.includes(s.id));
+        renderPresentTable(data.present);
+        renderAbsentTable(data.absent);
 
-  // Store in global for later use
-  window.attendanceData = {
-    present: presentStudents,
-    absent: absentStudents,
-    allStudents: allStudents,
-  };
-
-  renderPresentTable(presentStudents);
-  renderAbsentTable(absentStudents);
-
-  studentsMarkedCount = presentStudents.length;
-  updateStudentsMarked(studentsMarkedCount);
+        studentsMarkedCount = data.present_count;
+        updateStudentsMarked(studentsMarkedCount);
+      }
+    })
+    .catch((error) => {
+      console.error("Error loading attendance data:", error);
+      // Fallback to empty state
+      renderPresentTable([]);
+      renderAbsentTable([]);
+    });
 }
 
 function renderPresentTable(data) {
@@ -845,54 +829,13 @@ function filterTableRows(rows, query) {
    Export Functionality
    ======================================== */
 function exportAttendance() {
-  if (!window.attendanceData) {
-    showNotification("No attendance data to export", "warning");
-    return;
-  }
+  // Use backend Excel export API
+  showNotification("Generating Excel report...", "info");
 
-  const { present, absent } = window.attendanceData;
+  // Trigger download by navigating to export endpoint
+  window.location.href = "/api/export_excel";
 
-  if (present.length === 0 && absent.length === 0) {
-    showNotification("No attendance data to export", "warning");
-    return;
-  }
-
-  const today = new Date().toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-
-  // Build CSV content
-  let csvContent = "Name,Roll No,Date,Time,Confidence,Status\n";
-
-  // Add present students
-  present.forEach((student) => {
-    csvContent += `"${student.name}","${student.id}","${today}","${student.time}","${student.confidence}%","Present"\n`;
-  });
-
-  // Add absent students
-  absent.forEach((student) => {
-    csvContent += `"${student.name}","${student.id}","${today}","--:--","--","Absent"\n`;
-  });
-
-  // Download CSV
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
-
-  link.setAttribute("href", url);
-  link.setAttribute(
-    "download",
-    `attendance_${new Date().toISOString().split("T")[0]}.csv`,
-  );
-  link.style.visibility = "hidden";
-
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  addLogEntry("Attendance exported to CSV", "success");
+  addLogEntry("Attendance exported to Excel", "success");
   showNotification("Attendance exported successfully!", "success");
 }
 
