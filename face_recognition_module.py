@@ -273,14 +273,38 @@ class WebcamCapture:
     def start(self):
         """Start the webcam capture."""
         if self.cap is None or not self.cap.isOpened():
-            self.cap = cv2.VideoCapture(self.camera_index)
+            # Try DirectShow backend first (more reliable on Windows)
+            backends = [
+                (cv2.CAP_DSHOW, "DirectShow"),
+                (cv2.CAP_MSMF, "MSMF"),
+                (cv2.CAP_ANY, "Default")
+            ]
             
-            # Set camera properties for better performance
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-            self.cap.set(cv2.CAP_PROP_FPS, 30)
+            for backend, name in backends:
+                print(f"Trying camera with {name} backend...")
+                self.cap = cv2.VideoCapture(self.camera_index, backend)
+                
+                if self.cap.isOpened():
+                    # Test if we can actually grab a frame
+                    ret, _ = self.cap.read()
+                    if ret:
+                        print(f"Camera opened successfully with {name} backend")
+                        break
+                    else:
+                        self.cap.release()
+                        print(f"{name} backend opened but couldn't grab frame")
+                else:
+                    print(f"{name} backend failed to open camera")
+            
+            if self.cap and self.cap.isOpened():
+                # Set camera properties for better performance
+                self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                self.cap.set(cv2.CAP_PROP_FPS, 30)
+                # Add buffer size to reduce latency
+                self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         
-        self.is_running = self.cap.isOpened()
+        self.is_running = self.cap is not None and self.cap.isOpened()
         return self.is_running
     
     def read_frame(self):
