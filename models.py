@@ -72,41 +72,90 @@ def init_db():
     print("Database initialized successfully!")
 
 
-def seed_sample_data():
-    """Seed the database with sample students and faculty for testing."""
+def sync_students_from_dataset():
+    """
+    Sync students table with dataset folder.
+    Scans dataset folder and adds/updates students based on folder names.
+    Folder name format: StudentName or StudentName_RollNo
+    """
+    dataset_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dataset')
+    
+    if not os.path.exists(dataset_path):
+        print(f"Dataset folder not found: {dataset_path}")
+        return
+    
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Sample students data
-    students = [
-        ('Rahul Kumar', 'CSE001', 'A', 'dataset/Rahul_Kumar_CSE001'),
-        ('Priya Sharma', 'CSE002', 'A', 'dataset/Priya_Sharma_CSE002'),
-        ('Amit Singh', 'CSE003', 'A', 'dataset/Amit_Singh_CSE003'),
-        ('Sneha Patel', 'CSE004', 'A', 'dataset/Sneha_Patel_CSE004'),
-        ('Vikram Reddy', 'CSE005', 'A', 'dataset/Vikram_Reddy_CSE005'),
-        ('Ananya Iyer', 'CSE006', 'A', 'dataset/Ananya_Iyer_CSE006'),
-        ('Rohan Mehta', 'CSE007', 'A', 'dataset/Rohan_Mehta_CSE007'),
-        ('Kavya Nair', 'CSE008', 'A', 'dataset/Kavya_Nair_CSE008'),
-        ('Siddharth Joshi', 'CSE009', 'A', 'dataset/Siddharth_Joshi_CSE009'),
-        ('Divya Krishnan', 'CSE010', 'A', 'dataset/Divya_Krishnan_CSE010'),
-        ('Arjun Verma', 'CSE011', 'A', 'dataset/Arjun_Verma_CSE011'),
-        ('Neha Gupta', 'CSE012', 'A', 'dataset/Neha_Gupta_CSE012'),
-        ('Mohammed Ali', 'CSE013', 'A', 'dataset/Mohammed_Ali_CSE013'),
-        ('Pooja Reddy', 'CSE014', 'A', 'dataset/Pooja_Reddy_CSE014'),
-        ('Karthik Sundaram', 'CSE015', 'A', 'dataset/Karthik_Sundaram_CSE015'),
-    ]
+    # Clear ALL existing students and attendance - only dataset students should exist
+    cursor.execute('DELETE FROM students')
+    cursor.execute('DELETE FROM attendance')
     
-    for name, roll_no, section, image_path in students:
+    students_added = 0
+    
+    for folder_name in os.listdir(dataset_path):
+        folder_path = os.path.join(dataset_path, folder_name)
+        
+        # Skip files (like README.md)
+        if not os.path.isdir(folder_path):
+            continue
+        
+        # Check if folder contains at least one image
+        has_images = any(
+            f.lower().endswith(('.jpg', '.jpeg', '.png'))
+            for f in os.listdir(folder_path)
+        )
+        
+        if not has_images:
+            print(f"Skipping {folder_name} - no images found")
+            continue
+        
+        # Parse folder name: Name_RollNo or just Name
+        parts = folder_name.rsplit('_', 1)
+        if len(parts) == 2 and parts[1].isalnum():
+            student_name = parts[0].replace('_', ' ')
+            roll_no = parts[1].upper()
+        else:
+            student_name = folder_name.replace('_', ' ')
+            roll_no = folder_name.upper()  # Use folder name as roll number
+        
+        # Default section to 'A'
+        section = 'A'
+        image_path = f'dataset/{folder_name}'
+        
         try:
+            # Try to insert new student
             cursor.execute(
                 'INSERT INTO students (name, roll_no, section, image_path) VALUES (?, ?, ?, ?)',
-                (name, roll_no, section, image_path)
+                (student_name, roll_no, section, image_path)
             )
+            students_added += 1
+            print(f"Added student: {student_name} ({roll_no})")
         except sqlite3.IntegrityError:
-            # Student already exists, skip
-            pass
+            # Student already exists, update path
+            cursor.execute(
+                'UPDATE students SET name = ?, image_path = ? WHERE roll_no = ?',
+                (student_name, image_path, roll_no)
+            )
+            print(f"Updated student: {student_name} ({roll_no})")
     
-    # Sample faculty data
+    conn.commit()
+    conn.close()
+    print(f"\nDataset sync complete! {students_added} new students added.")
+
+
+def seed_sample_data():
+    """
+    Initialize data - syncs students from dataset folder and adds sample faculty.
+    Students are now loaded dynamically from dataset folder.
+    """
+    # Sync students from dataset folder
+    sync_students_from_dataset()
+    
+    # Add sample faculty for login
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
     faculty_data = [
         ('Prof. Sharma', 'sharma@college.edu', 'password123', 'Computer Science'),
         ('Prof. Gupta', 'gupta@college.edu', 'password123', 'Computer Science'),
@@ -127,7 +176,7 @@ def seed_sample_data():
     
     conn.commit()
     conn.close()
-    print("Sample data seeded successfully!")
+    print("Sample faculty data seeded successfully!")
 
 
 # ========================================

@@ -273,6 +273,11 @@ class WebcamCapture:
     def start(self):
         """Start the webcam capture."""
         if self.cap is None or not self.cap.isOpened():
+            # Try multiple camera indices for compatibility across different laptops
+            camera_indices = [self.camera_index, 0, 1, 2]
+            # Remove duplicates while preserving order
+            camera_indices = list(dict.fromkeys(camera_indices))
+            
             # Try DirectShow backend first (more reliable on Windows)
             backends = [
                 (cv2.CAP_DSHOW, "DirectShow"),
@@ -280,21 +285,40 @@ class WebcamCapture:
                 (cv2.CAP_ANY, "Default")
             ]
             
-            for backend, name in backends:
-                print(f"Trying camera with {name} backend...")
-                self.cap = cv2.VideoCapture(self.camera_index, backend)
-                
-                if self.cap.isOpened():
-                    # Test if we can actually grab a frame
-                    ret, _ = self.cap.read()
-                    if ret:
-                        print(f"Camera opened successfully with {name} backend")
-                        break
+            camera_found = False
+            for idx in camera_indices:
+                if camera_found:
+                    break
+                for backend, name in backends:
+                    print(f"Trying camera index {idx} with {name} backend...")
+                    self.cap = cv2.VideoCapture(idx, backend)
+                    
+                    if self.cap.isOpened():
+                        # Test if we can actually grab a frame
+                        ret, _ = self.cap.read()
+                        if ret:
+                            print(f"Camera {idx} opened successfully with {name} backend")
+                            self.camera_index = idx
+                            camera_found = True
+                            break
+                        else:
+                            self.cap.release()
+                            print(f"Camera {idx} with {name} backend opened but couldn't grab frame")
                     else:
-                        self.cap.release()
-                        print(f"{name} backend opened but couldn't grab frame")
-                else:
-                    print(f"{name} backend failed to open camera")
+                        print(f"Camera {idx} with {name} backend failed to open")
+            
+            if not camera_found:
+                print("\n" + "="*60)
+                print("ERROR: Could not open camera!")
+                print("="*60)
+                print("Troubleshooting tips for your team:")
+                print("  1. Close other apps using camera (Zoom, Teams, Skype, etc.)")
+                print("  2. Windows: Settings > Privacy > Camera > Allow apps to access")
+                print("  3. Check if the laptop has a physical camera switch")
+                print("  4. Try restarting the laptop")
+                print("  5. Update camera drivers from Device Manager")
+                print("="*60 + "\n")
+                return False
             
             if self.cap and self.cap.isOpened():
                 # Set camera properties for better performance
