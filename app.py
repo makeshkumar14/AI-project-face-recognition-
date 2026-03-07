@@ -253,8 +253,8 @@ def video_feed():
                     # Recognize faces
                     recognized = face_manager.recognize_faces(frame)
                     
-                    # Mark attendance for recognized faces with confidence >= 30%
-                    CONFIDENCE_THRESHOLD = 30.0
+                    # Mark attendance for recognized faces with confidence >= 40%
+                    CONFIDENCE_THRESHOLD = 40.0
                     for face in recognized:
                         if face['confidence'] >= CONFIDENCE_THRESHOLD and face['name'] != 'Unknown':
                             # Use the student name (uppercase) as roll_no since that's how dataset folders are named
