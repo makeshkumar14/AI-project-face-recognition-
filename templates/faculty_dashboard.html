@@ -126,35 +126,34 @@
                 </div>
             </div>
 
-            <!-- Main Dashboard Grid - 2 Column Layout (Control + Webcam) -->
-            <div class="dashboard-grid-2col">
-                <!-- Control Panel -->
-                <div class="panel-section slide-up delay-1">
-                    <div class="panel-header">
-                        <h3>
-                            <span class="panel-header-icon">🎮</span>
-                            Control Panel
-                        </h3>
-                    </div>
-                    <div class="panel-body">
-                        <!-- Control Buttons -->
-                        <div class="control-buttons-vertical">
-                            <button id="startAttendance" class="btn btn-success btn-block">
+            <!-- Control Panel - Horizontal Bar Above Webcam -->
+            <div class="panel-section slide-up delay-1 control-panel-bar">
+                <div class="panel-header">
+                    <h3>
+                        <span class="panel-header-icon">🎮</span>
+                        Control Panel
+                    </h3>
+                </div>
+                <div class="panel-body">
+                    <div class="control-bar-layout">
+                        <!-- Control Buttons - Horizontal -->
+                        <div class="control-buttons-horizontal">
+                            <button id="startAttendance" class="btn btn-success">
                                 <span class="btn-icon">▶️</span>
                                 Start Attendance
                             </button>
-                            <button id="stopAttendance" class="btn btn-danger btn-block" disabled>
+                            <button id="stopAttendance" class="btn btn-danger" disabled>
                                 <span class="btn-icon">⏹️</span>
                                 Stop Attendance
                             </button>
-                            <button id="resetSession" class="btn btn-warning btn-block" onclick="resetSession()">
+                            <button id="resetSession" class="btn btn-warning" onclick="resetSession()">
                                 <span class="btn-icon">🔄</span>
                                 Reset Session
                             </button>
                         </div>
 
-                        <!-- Status Indicator -->
-                        <div class="status-indicator-enhanced" id="statusIndicator">
+                        <!-- Status Indicator - Inline -->
+                        <div class="status-indicator-enhanced status-indicator-inline" id="statusIndicator">
                             <div class="status-dot stopped"></div>
                             <div class="status-text">
                                 <h4>Attendance Stopped</h4>
@@ -163,56 +162,56 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Webcam Preview - Expanded -->
-                <div class="panel-section slide-up delay-2 webcam-panel webcam-panel-expanded">
-                    <div class="panel-header">
-                        <h3>
-                            <span class="panel-header-icon">📷</span>
-                            Live Webcam Feed
-                        </h3>
-                        <div class="webcam-controls">
-                            <span class="fps-indicator" id="fpsIndicator">-- FPS</span>
-                        </div>
+            <!-- Webcam Preview - Full Frame -->
+            <div class="panel-section slide-up delay-2 webcam-panel webcam-panel-fullframe">
+                <div class="panel-header">
+                    <h3>
+                        <span class="panel-header-icon">📷</span>
+                        Live Webcam Feed
+                    </h3>
+                    <div class="webcam-controls">
+                        <span class="fps-indicator" id="fpsIndicator">-- FPS</span>
                     </div>
-                    <div class="panel-body">
-                        <div class="webcam-container webcam-container-large" id="webcamContainer">
-                            <!-- Live Badge -->
-                            <div class="webcam-live-badge">
-                                <span class="live-dot"></span>
-                                LIVE
-                            </div>
+                </div>
+                <div class="panel-body webcam-body-fullframe">
+                    <div class="webcam-container webcam-container-fullframe" id="webcamContainer">
+                        <!-- Live Badge -->
+                        <div class="webcam-live-badge">
+                            <span class="live-dot"></span>
+                            LIVE
+                        </div>
 
-                            <!-- Face Detection Overlay -->
-                            <div class="face-detection-overlay" id="faceOverlay">
-                                <div class="detected-face-box"></div>
-                            </div>
+                        <!-- Face Detection Overlay -->
+                        <div class="face-detection-overlay" id="faceOverlay">
+                            <div class="detected-face-box"></div>
+                        </div>
 
-                            <!-- Placeholder -->
-                            <div class="webcam-placeholder">
-                                <div class="webcam-placeholder-icon">📷</div>
-                                <p>Camera feed will appear here</p>
-                                <p class="text-muted" style="font-size: 0.875rem; margin-top: 8px">
-                                    Start attendance to activate webcam
-                                </p>
-                            </div>
+                        <!-- Placeholder -->
+                        <div class="webcam-placeholder">
+                            <div class="webcam-placeholder-icon">📷</div>
+                            <p>Camera feed will appear here</p>
+                            <p class="text-muted" style="font-size: 0.875rem; margin-top: 8px">
+                                Start attendance to activate webcam
+                            </p>
+                        </div>
 
-                            <!-- Video Stream from Flask Backend -->
-                            <img id="webcamFeed" src="" alt="Camera Feed" style="
+                        <!-- Video Stream from Flask Backend -->
+                        <img id="webcamFeed" src="" alt="Camera Feed" style="
                     display: none;
                     width: 100%;
                     height: 100%;
                     object-fit: cover;
                     border-radius: 8px;
                   " />
-                        </div>
+                    </div>
 
-                        <!-- Recognition Feed -->
-                        <div class="recognition-feed" id="recognitionFeed">
-                            <div class="recognition-item fade-in">
-                                <span class="recognition-icon">👤</span>
-                                <span class="recognition-text">Waiting for face detection...</span>
-                            </div>
+                    <!-- Recognition Feed -->
+                    <div class="recognition-feed" id="recognitionFeed">
+                        <div class="recognition-item fade-in">
+                            <span class="recognition-icon">👤</span>
+                            <span class="recognition-text">Waiting for face detection...</span>
                         </div>
                     </div>
                 </div>
