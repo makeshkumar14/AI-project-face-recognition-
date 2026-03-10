@@ -2609,27 +2609,107 @@ body.theme-light .stat-card {
 }
 
 /* ========================================
-   2-COLUMN DASHBOARD GRID (Control + Webcam)
+   CONTROL PANEL BAR (Horizontal Above Webcam)
    ======================================== */
-.dashboard-grid-2col {
-    display: grid;
-    grid-template-columns: 350px 1fr;
-    gap: 24px;
+.control-panel-bar .panel-body {
+    padding: 12px 20px;
 }
 
-@media (max-width: 1024px) {
-    .dashboard-grid-2col {
-        grid-template-columns: 1fr;
+.control-bar-layout {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.control-buttons-horizontal {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.control-buttons-horizontal .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-indicator-inline {
+    flex-direction: row;
+    gap: 12px;
+    padding: 8px 16px;
+    border-radius: 12px;
+    background: var(--bg-glass);
+}
+
+.status-indicator-inline .status-text h4 {
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+.status-indicator-inline .status-text p {
+    font-size: 0.8rem;
+    margin-bottom: 0;
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .control-bar-layout {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .control-buttons-horizontal {
+        flex-direction: column;
+    }
+
+    .status-indicator-inline .status-text p {
+        display: block;
     }
 }
 
-/* Expanded Webcam Panel */
-.webcam-panel-expanded {
-    min-height: 450px;
+/* ========================================
+   FULL-FRAME WEBCAM FEED
+   ======================================== */
+.webcam-panel-fullframe {
+    min-height: 0;
 }
 
-.webcam-container-large {
-    min-height: 380px;
+.webcam-body-fullframe {
+    padding: 0;
+}
+
+.webcam-container-fullframe {
+    width: 100%;
+    height: 85vh;
+    min-height: 600px;
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+    position: relative;
+    overflow: hidden;
+}
+
+.webcam-container-fullframe .webcam-placeholder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.webcam-container-fullframe .webcam-placeholder-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+}
+
+.webcam-container-fullframe #webcamFeed {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 /* Theme Toggle Button */
