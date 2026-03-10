@@ -72,56 +72,38 @@ def init_db():
     print("Database initialized successfully!")
 
 
-def sync_students_from_dataset():
+def sync_enrolled_students():
     """
-    Sync students table with dataset folder.
-    Scans dataset folder and adds/updates students based on folder names.
-    Folder name format: StudentName or StudentName_RollNo
+    Sync enrolled students from embeddings folder to database.
+    This replaces the sample data with real enrolled students.
     """
-    dataset_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dataset')
+    import json
+    from pathlib import Path
     
-    if not os.path.exists(dataset_path):
-        print(f"Dataset folder not found: {dataset_path}")
-        return
+    # Path to embeddings config
+    embeddings_path = Path(os.path.dirname(os.path.abspath(__file__))) / 'dataset' / 'embeddings'
+    config_path = embeddings_path / 'config.json'
+    
+    if not config_path.exists():
+        print("No enrolled students found. Run enroll_students.py first.")
+        return []
+    
+    # Read enrolled students from config
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    
+    enrolled_names = config.get('students', [])
     
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Clear ALL existing students and attendance - only dataset students should exist
-    cursor.execute('DELETE FROM students')
-    cursor.execute('DELETE FROM attendance')
-    
-    students_added = 0
-    
-    for folder_name in os.listdir(dataset_path):
-        folder_path = os.path.join(dataset_path, folder_name)
-        
-        # Skip files (like README.md)
-        if not os.path.isdir(folder_path):
-            continue
-        
-        # Check if folder contains at least one image
-        has_images = any(
-            f.lower().endswith(('.jpg', '.jpeg', '.png'))
-            for f in os.listdir(folder_path)
-        )
-        
-        if not has_images:
-            print(f"Skipping {folder_name} - no images found")
-            continue
-        
-        # Parse folder name: Name_RollNo or just Name
-        parts = folder_name.rsplit('_', 1)
-        if len(parts) == 2 and parts[1].isalnum():
-            student_name = parts[0].replace('_', ' ')
-            roll_no = parts[1].upper()
-        else:
-            student_name = folder_name.replace('_', ' ')
-            roll_no = folder_name.upper()  # Use folder name as roll number
-        
-        # Default section to 'A'
-        section = 'A'
-        image_path = f'dataset/{folder_name}'
+    synced = []
+    for i, name in enumerate(enrolled_names, start=1):
+        # Use name as roll_no (or generate one)
+        roll_no = name  # Using name as roll_no for simplicity
+        student_name = name
+        section = 'A'  # Default section
+        image_path = f'dataset/{name}'
         
         try:
             # Try to insert new student
@@ -129,37 +111,83 @@ def sync_students_from_dataset():
                 'INSERT INTO students (name, roll_no, section, image_path) VALUES (?, ?, ?, ?)',
                 (student_name, roll_no, section, image_path)
             )
-            students_added += 1
-            print(f"Added student: {student_name} ({roll_no})")
+            synced.append({'name': name, 'roll_no': roll_no, 'status': 'added'})
         except sqlite3.IntegrityError:
-            # Student already exists, update path
+            # Student already exists, update if needed
             cursor.execute(
                 'UPDATE students SET name = ?, image_path = ? WHERE roll_no = ?',
-                (student_name, image_path, roll_no)
+                (name, image_path, roll_no)
             )
-            print(f"Updated student: {student_name} ({roll_no})")
+            synced.append({'name': name, 'roll_no': roll_no, 'status': 'updated'})
     
     conn.commit()
     conn.close()
-    print(f"\nDataset sync complete! {students_added} new students added.")
+    print(f"Synced {len(synced)} enrolled students to database")
+    return synced
+
+
+def clear_sample_students():
+    """Remove sample students that are not in the enrolled list."""
+    import json
+    from pathlib import Path
+    
+    embeddings_path = Path(os.path.dirname(os.path.abspath(__file__))) / 'dataset' / 'embeddings'
+    config_path = embeddings_path / 'config.json'
+    
+    enrolled_names = []
+    if config_path.exists():
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        enrolled_names = config.get('students', [])
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get all students
+    all_students = cursor.execute('SELECT roll_no FROM students').fetchall()
+    
+    removed = 0
+    for student in all_students:
+        roll_no = student['roll_no']
+        # Remove if not in enrolled list
+        if roll_no not in enrolled_names:
+            cursor.execute('DELETE FROM students WHERE roll_no = ?', (roll_no,))
+            removed += 1
+    
+    conn.commit()
+    conn.close()
+    print(f"Removed {removed} sample students not in enrolled list")
+    return removed
+
+
+def add_student(name, roll_no, section='A', image_path=None):
+    """Add a single student to database."""
+    conn = get_db_connection()
+    try:
+        conn.execute(
+            'INSERT INTO students (name, roll_no, section, image_path) VALUES (?, ?, ?, ?)',
+            (name, roll_no, section, image_path or f'dataset/{name}')
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except sqlite3.IntegrityError:
+        conn.close()
+        return False
 
 
 def seed_sample_data():
-    """
-    Initialize data - syncs students from dataset folder and adds sample faculty.
-    Students are now loaded dynamically from dataset folder.
-    """
-    # Sync students from dataset folder
-    sync_students_from_dataset()
+    """Seed database with enrolled students from embeddings (not sample data)."""
+    # First sync enrolled students
+    synced = sync_enrolled_students()
     
-    # Add sample faculty for login
+    # Seed faculty data
     conn = get_db_connection()
     cursor = conn.cursor()
     
     faculty_data = [
         ('Prof. Sharma', 'sharma@college.edu', 'password123', 'Computer Science'),
         ('Prof. Gupta', 'gupta@college.edu', 'password123', 'Computer Science'),
-        ('Prof. Kumar', 'kumar@college.edu', 'password123', 'Computer Science'),
         ('Admin', 'admin@college.edu', 'admin123', 'Administration'),
     ]
     
@@ -171,12 +199,11 @@ def seed_sample_data():
                 (name, email, password_hash, department)
             )
         except sqlite3.IntegrityError:
-            # Faculty already exists, skip
             pass
     
     conn.commit()
     conn.close()
-    print("Sample faculty data seeded successfully!")
+    print("Database seeded with enrolled students and faculty!")
 
 
 # ========================================

@@ -217,60 +217,324 @@ def logout():
 
 
 # ========================================
-# Face Recognition Streaming (Optional)
+# Student & Attendance Data API
+# ========================================
+
+@app.route('/api/sync_students', methods=['POST'])
+def api_sync_students():
+    """Sync enrolled students from embeddings to database."""
+    from models import sync_enrolled_students, clear_sample_students
+    
+    # Clear old sample students
+    removed = clear_sample_students()
+    
+    # Sync enrolled students
+    synced = sync_enrolled_students()
+    
+    return jsonify({
+        'success': True,
+        'message': f'Synced {len(synced)} students, removed {removed} old entries',
+        'synced': synced
+    })
+
+
+@app.route('/api/students', methods=['GET'])
+def api_get_students():
+    """Get all enrolled students from database."""
+    from models import get_all_students
+    
+    students = get_all_students()
+    return jsonify({
+        'success': True,
+        'students': students,
+        'total': len(students)
+    })
+
+
+@app.route('/api/attendance_data', methods=['GET'])
+def api_attendance_data():
+    """Get current attendance data for the running session."""
+    from attendance_logic import get_session_summary
+    from models import get_all_students
+    
+    summary = get_session_summary()
+    all_students = get_all_students()
+    
+    if not summary or not summary['session'].get('is_active', False):
+        # No active session - show all students as absent (not started)
+        return jsonify({
+            'success': True,
+            'session_active': False,
+            'present': [],
+            'absent': [{'id': s['roll_no'], 'name': s['name']} for s in all_students],
+            'total': len(all_students),
+            'present_count': 0,
+            'absent_count': len(all_students)
+        })
+    
+    # Format present students
+    present = []
+    present_roll_nos = set()
+    for s in summary.get('present', []):
+        present.append({
+            'id': s['roll_no'],
+            'name': s['name'],
+            'time': s.get('time', '--:--'),
+            'confidence': s.get('confidence', 0)
+        })
+        present_roll_nos.add(s['roll_no'])
+    
+    # Calculate absent (all students not in present)
+    absent = []
+    for s in all_students:
+        if s['roll_no'] not in present_roll_nos:
+            absent.append({
+                'id': s['roll_no'],
+                'name': s['name']
+            })
+    
+    return jsonify({
+        'success': True,
+        'session_active': True,
+        'session': summary['session'],
+        'present': present,
+        'absent': absent,
+        'total': len(all_students),
+        'present_count': len(present),
+        'absent_count': len(absent)
+    })
+
+
+@app.route('/api/export_excel', methods=['GET'])
+def api_export_excel():
+    """Export attendance data to Excel file."""
+    from attendance_logic import get_session_summary
+    from models import get_all_students
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from datetime import datetime
+    import io
+    
+    summary = get_session_summary()
+    all_students = get_all_students()
+    
+    # Create workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Attendance Report"
+    
+    # Styles
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="4F46E5", end_color="4F46E5", fill_type="solid")
+    present_fill = PatternFill(start_color="D1FAE5", end_color="D1FAE5", fill_type="solid")
+    absent_fill = PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid")
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Session info
+    session_info = summary.get('session', {}) if summary else {}
+    ws['A1'] = "Attendance Report"
+    ws['A1'].font = Font(bold=True, size=16)
+    ws['A2'] = f"Date: {session_info.get('date', datetime.now().strftime('%Y-%m-%d'))}"
+    ws['A3'] = f"Subject: {session_info.get('subject', 'N/A')}"
+    ws['A4'] = f"Section: {session_info.get('section', 'A')}"
+    ws['A5'] = f"Period: {session_info.get('period', 'N/A')}"
+    
+    # Headers (row 7)
+    headers = ['S.No', 'Roll No', 'Student Name', 'Status', 'Time', 'Confidence (%)']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=7, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = thin_border
+    
+    # Collect present roll numbers
+    present_data = {}
+    if summary:
+        for s in summary.get('present', []):
+            present_data[s['roll_no']] = {
+                'time': s.get('time', '--:--'),
+                'confidence': s.get('confidence', 0)
+            }
+    
+    # Data rows
+    row_num = 8
+    for i, student in enumerate(all_students, 1):
+        roll_no = student['roll_no']
+        is_present = roll_no in present_data
+        
+        status = 'PRESENT' if is_present else 'ABSENT'
+        time_str = present_data[roll_no]['time'] if is_present else '--'
+        confidence = present_data[roll_no]['confidence'] if is_present else 0
+        
+        row_data = [i, roll_no, student['name'], status, time_str, f"{confidence:.1f}" if confidence else '--']
+        
+        for col, value in enumerate(row_data, 1):
+            cell = ws.cell(row=row_num, column=col, value=value)
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal='center')
+            
+            # Color status cell
+            if col == 4:  # Status column
+                cell.fill = present_fill if is_present else absent_fill
+        
+        row_num += 1
+    
+    # Summary row
+    present_count = len(present_data)
+    absent_count = len(all_students) - present_count
+    ws.cell(row=row_num + 1, column=1, value="Summary:").font = Font(bold=True)
+    ws.cell(row=row_num + 1, column=2, value=f"Present: {present_count}")
+    ws.cell(row=row_num + 1, column=3, value=f"Absent: {absent_count}")
+    ws.cell(row=row_num + 1, column=4, value=f"Total: {len(all_students)}")
+    
+    # Adjust column widths
+    ws.column_dimensions['A'].width = 8
+    ws.column_dimensions['B'].width = 15
+    ws.column_dimensions['C'].width = 25
+    ws.column_dimensions['D'].width = 12
+    ws.column_dimensions['E'].width = 12
+    ws.column_dimensions['F'].width = 15
+    
+    # Save to bytes buffer
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    # Generate filename
+    date_str = session_info.get('date', datetime.now().strftime('%Y-%m-%d'))
+    subject = session_info.get('subject', 'Attendance')
+    filename = f"Attendance_{subject}_{date_str}.xlsx"
+    
+    from flask import send_file
+    return send_file(
+        buffer,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
+    )
+
+
+# ========================================
+# Face Recognition Streaming (Advanced)
 # ========================================
 
 @app.route('/video_feed')
 def video_feed():
     """
     Video streaming route for face recognition.
-    Returns MJPEG stream of webcam with face detection overlay.
-    
-    Note: This is optional and requires webcam access.
+    Uses Advanced Face Recognition with:
+    - MTCNN detection
+    - FaceNet embeddings
+    - Multi-frame voting
+    - High precision mode
     """
     try:
-        from face_recognition_module import WebcamCapture, face_manager, draw_face_boxes
+        import sys
+        import os
+        
+        # Add torch path
+        TORCH_PATH = os.path.join(os.environ.get('TEMP', '/tmp'), 'torch_temp')
+        if TORCH_PATH not in sys.path:
+            sys.path.insert(0, TORCH_PATH)
+        
+        from face_recognition_module import WebcamCapture
         from attendance_logic import get_current_session, mark_present
         import cv2
+        import time
+        
+        # Try to use advanced recognizer, fall back to basic if not available
+        try:
+            from advanced_face_recognition import get_recognizer, draw_recognition_boxes
+            recognizer = get_recognizer()
+            use_advanced = True
+            print("Using Advanced Face Recognition (MTCNN + FaceNet)")
+        except Exception as e:
+            print(f"Advanced recognition not available: {e}")
+            print("Falling back to basic recognition")
+            from face_recognition_module import face_manager, draw_face_boxes
+            face_manager.load_known_faces()
+            use_advanced = False
         
         def generate_frames():
             cam = WebcamCapture()
-            if not cam.start():
-                yield b'--frame\r\nContent-Type: text/plain\r\n\r\nCamera not available\r\n'
-                return
-            
-            # Load known faces
-            face_manager.load_known_faces()
-            
-            while True:
-                frame = cam.read_frame()
-                if frame is None:
-                    continue
+            try:
+                if not cam.start():
+                    yield b'--frame\r\nContent-Type: text/plain\r\n\r\nCamera not available\r\n'
+                    return
                 
-                session_obj = get_current_session()
+                # Frame counter for voting system
+                frame_count = 0
                 
-                if session_obj.is_active:
-                    # Recognize faces
-                    recognized = face_manager.recognize_faces(frame)
+                while True:
+                    frame = cam.read_frame()
                     
-                    # Mark attendance for recognized faces with confidence >= 40%
-                    CONFIDENCE_THRESHOLD = 40.0
-                    for face in recognized:
-                        if face['confidence'] >= CONFIDENCE_THRESHOLD and face['name'] != 'Unknown':
-                            # Use the student name (uppercase) as roll_no since that's how dataset folders are named
-                            roll_no = face['roll_no'].upper()
-                            mark_present(roll_no, face['confidence'])
+                    if frame is None:
+                        time.sleep(0.01)
+                        continue
                     
-                    # Draw boxes
-                    frame = draw_face_boxes(frame, recognized)
-                
-                # Encode frame
-                ret, buffer = cv2.imencode('.jpg', frame)
-                if not ret:
-                    continue
-                
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                    session_obj = get_current_session()
+                    display_frame = frame.copy()
+                    
+                    if session_obj.is_active:
+                        try:
+                            if use_advanced:
+                                # Advanced recognition with voting
+                                results = recognizer.recognize_frame(frame)
+                                recognizer.add_to_voting_buffer(results)
+                                
+                                # Check for confirmed recognition via voting
+                                voting_result = recognizer.get_voting_result()
+                                if voting_result and voting_result['status'] == 'confirmed':
+                                    # Mark attendance for confirmed recognition
+                                    name = voting_result['name']
+                                    confidence = voting_result['confidence']
+                                    
+                                    # Use name as roll_no (can be customized)
+                                    mark_present(name, confidence * 100)
+                                    print(f"Attendance marked: {name} (conf: {confidence:.2f})")
+                                    
+                                    # Clear buffer after successful recognition
+                                    recognizer.clear_voting_buffer()
+                                
+                                # Draw boxes on frame
+                                display_frame = draw_recognition_boxes(display_frame, results)
+                            else:
+                                # Fallback to basic recognition
+                                if frame_count % 3 == 0:
+                                    recognized = face_manager.recognize_faces(frame)
+                                    for face in recognized:
+                                        if face.get('roll_no') and face['roll_no'] != 'UNKNOWN':
+                                            mark_present(face['roll_no'], face['confidence'])
+                                    display_frame = draw_face_boxes(display_frame, recognized)
+                                    
+                        except Exception as e:
+                            print(f"Recognition error: {e}")
+                    
+                    frame_count += 1
+                    
+                    # Encode and yield frame
+                    try:
+                        ret, buffer = cv2.imencode('.jpg', display_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                        if ret:
+                            yield (b'--frame\r\n'
+                                   b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                    except Exception as e:
+                        print(f"Frame encoding error: {e}")
+                    
+                    # ~20 fps for advanced (heavier processing)
+                    time.sleep(0.05 if use_advanced else 0.033)
+                    
+            finally:
+                cam.stop()
+                if use_advanced:
+                    recognizer.clear_voting_buffer()
+                print("Camera released")
         
         return app.response_class(
             generate_frames(),

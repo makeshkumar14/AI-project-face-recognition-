@@ -222,7 +222,7 @@ function startAttendance() {
         // Hide placeholder and show camera feed
         const placeholder = document.querySelector(".webcam-placeholder");
         const webcamFeed = document.getElementById("webcamFeed");
-        
+
         if (placeholder) placeholder.style.display = "none";
         if (webcamFeed) {
           webcamFeed.src = "/video_feed";
@@ -253,13 +253,13 @@ let recognitionPollingInterval = null;
 
 function startRecognitionPolling() {
   if (recognitionPollingInterval) clearInterval(recognitionPollingInterval);
-  
+
   recognitionPollingInterval = setInterval(() => {
     if (!isAttendanceRunning) {
       clearInterval(recognitionPollingInterval);
       return;
     }
-    
+
     // Fetch current attendance data
     loadAttendanceData();
   }, 2000); // Poll every 2 seconds
@@ -312,7 +312,7 @@ function stopAttendance() {
       // Hide camera feed and show placeholder
       const placeholder = document.querySelector(".webcam-placeholder");
       const webcamFeed = document.getElementById("webcamFeed");
-      
+
       if (webcamFeed) {
         webcamFeed.src = "";
         webcamFeed.style.display = "none";
@@ -476,47 +476,39 @@ function startFaceDetectionSimulation() {
 function loadAttendanceData() {
   const presentBody = document.getElementById("presentData");
   const absentBody = document.getElementById("absentData");
+  const totalStudentsEl = document.getElementById("totalStudents");
 
   if (!presentBody && !absentBody) return;
 
-  // Fetch real student data from backend API
-  fetch("/api/get_attendance")
+  // Fetch attendance data from backend API
+  fetch("/api/attendance_data")
     .then((response) => response.json())
     .then((data) => {
       if (data.success) {
-        const presentStudents = (data.present || []).map((s) => ({
-          id: s.roll_no,
-          name: s.name,
-          time: s.time || "--:--",
-          confidence: s.confidence || 0,
-        }));
-
-        const absentStudents = (data.absent || []).map((s) => ({
-          id: s.roll_no,
-          name: s.name,
-        }));
-
-        const allStudents = [
-          ...presentStudents.map((s) => ({ id: s.id, name: s.name })),
-          ...absentStudents,
-        ];
+        // Update total students count
+        if (totalStudentsEl) {
+          totalStudentsEl.textContent = data.total;
+        }
 
         // Store in global for later use
         window.attendanceData = {
-          present: presentStudents,
-          absent: absentStudents,
-          allStudents: allStudents,
+          present: data.present,
+          absent: data.absent,
+          total: data.total,
         };
 
-        renderPresentTable(presentStudents);
-        renderAbsentTable(absentStudents);
+        renderPresentTable(data.present);
+        renderAbsentTable(data.absent);
 
-        studentsMarkedCount = presentStudents.length;
+        studentsMarkedCount = data.present_count;
         updateStudentsMarked(studentsMarkedCount);
       }
     })
     .catch((error) => {
       console.error("Error loading attendance data:", error);
+      // Fallback to empty state
+      renderPresentTable([]);
+      renderAbsentTable([]);
     });
 }
 
@@ -825,54 +817,13 @@ function filterTableRows(rows, query) {
    Export Functionality
    ======================================== */
 function exportAttendance() {
-  if (!window.attendanceData) {
-    showNotification("No attendance data to export", "warning");
-    return;
-  }
+  // Use backend Excel export API
+  showNotification("Generating Excel report...", "info");
 
-  const { present, absent } = window.attendanceData;
+  // Trigger download by navigating to export endpoint
+  window.location.href = "/api/export_excel";
 
-  if (present.length === 0 && absent.length === 0) {
-    showNotification("No attendance data to export", "warning");
-    return;
-  }
-
-  const today = new Date().toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-
-  // Build CSV content
-  let csvContent = "Name,Roll No,Date,Time,Confidence,Status\n";
-
-  // Add present students
-  present.forEach((student) => {
-    csvContent += `"${student.name}","${student.id}","${today}","${student.time}","${student.confidence}%","Present"\n`;
-  });
-
-  // Add absent students
-  absent.forEach((student) => {
-    csvContent += `"${student.name}","${student.id}","${today}","--:--","--","Absent"\n`;
-  });
-
-  // Download CSV
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
-
-  link.setAttribute("href", url);
-  link.setAttribute(
-    "download",
-    `attendance_${new Date().toISOString().split("T")[0]}.csv`,
-  );
-  link.style.visibility = "hidden";
-
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  addLogEntry("Attendance exported to CSV", "success");
+  addLogEntry("Attendance exported to Excel", "success");
   showNotification("Attendance exported successfully!", "success");
 }
 
