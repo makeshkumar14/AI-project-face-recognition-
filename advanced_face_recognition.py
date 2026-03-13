@@ -836,12 +836,7 @@ def get_recognizer() -> AdvancedFaceRecognizer:
 
 def draw_recognition_boxes(frame: np.ndarray, results: List[Dict]) -> np.ndarray:
     """
-    Draw bounding boxes and labels on frame.
-    
-    Color coding:
-    - Green: Confirmed recognition (high confidence)
-    - Yellow: Recognized but needs more votes
-    - Red: Unknown/rejected
+    Draw bounding boxes and labels on frame with high visibility.
     """
     for result in results:
         box = result.get('box')
@@ -853,7 +848,7 @@ def draw_recognition_boxes(frame: np.ndarray, results: List[Dict]) -> np.ndarray
         confidence = result.get('confidence', 0)
         status = result.get('status', 'unknown')
         
-        # Color based on status and confidence
+        # Colors (BGR)
         if status == 'confirmed' or (status == 'recognized' and confidence > 0.7):
             color = (0, 255, 0)  # Green
         elif status == 'recognized':
@@ -861,16 +856,20 @@ def draw_recognition_boxes(frame: np.ndarray, results: List[Dict]) -> np.ndarray
         else:
             color = (0, 0, 255)  # Red
         
-        # Draw box
-        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-        
-        # Draw label
+        # Enhanced Label drawing (Optimized for multi-detection)
         label = f"{name} ({confidence*100:.1f}%)"
-        label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)[0]
+        font = cv2.FONT_HERSHEY_DUPLEX
+        font_scale = 0.55 # Reduced from 0.8 for multi-detection
+        thickness = 1 # Reduced from 2 for cleaner look
         
-        cv2.rectangle(frame, (x1, y2), (x1 + label_size[0] + 10, y2 + label_size[1] + 10), color, -1)
-        cv2.putText(frame, label, (x1 + 5, y2 + label_size[1] + 5), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+        # Get label size for background rectangle
+        (label_w, label_h), baseline = cv2.getTextSize(label, font, font_scale, thickness)
+        
+        # Draw label background (more compact)
+        cv2.rectangle(frame, (x1, y1 - label_h - 6), (x1 + label_w + 6, y1), color, -1)
+        
+        # Draw label text
+        cv2.putText(frame, label, (x1 + 3, y1 - 4), font, font_scale, (255, 255, 255), thickness)
     
     return frame
 
