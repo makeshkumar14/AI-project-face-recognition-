@@ -294,6 +294,11 @@ class WebcamCapture:
     def start(self):
         """Start the webcam capture."""
         if self.cap is None or not self.cap.isOpened():
+            # Try multiple camera indices for compatibility across different laptops
+            camera_indices = [self.camera_index, 0, 1, 2]
+            # Remove duplicates while preserving order
+            camera_indices = list(dict.fromkeys(camera_indices))
+            
             # Try DirectShow backend first (more reliable on Windows)
             backends = [
                 (cv2.CAP_DSHOW, "DirectShow"),
@@ -301,36 +306,55 @@ class WebcamCapture:
                 (cv2.CAP_ANY, "Default")
             ]
             
-            for backend, name in backends:
-                print(f"Trying camera with {name} backend...")
-                self.cap = cv2.VideoCapture(self.camera_index, backend)
-                
-                if self.cap.isOpened():
-                    # Set MJPG codec first (more reliable on Windows, avoids corruption)
-                    fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-                    self.cap.set(cv2.CAP_PROP_FOURCC, fourcc)
+            camera_found = False
+            for idx in camera_indices:
+                if camera_found:
+                    break
+                for backend, name in backends:
+                    print(f"Trying camera index {idx} with {name} backend...")
+                    self.cap = cv2.VideoCapture(idx, backend)
                     
-                    # Set resolution and FPS before grabbing frames
-                    self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                    self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-                    self.cap.set(cv2.CAP_PROP_FPS, 30)
-                    self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                    
-                    # Flush a few frames to clear the buffer
-                    for _ in range(5):
-                        self.cap.read()
-                    
-                    # Test if we can actually grab a valid frame
-                    ret, test_frame = self.cap.read()
-                    if ret and test_frame is not None and test_frame.size > 0:
-                        print(f"Camera opened successfully with {name} backend")
-                        print(f"Frame size: {test_frame.shape}")
-                        break
+                    if self.cap.isOpened():
+                        # Set MJPG codec first (more reliable on Windows, avoids corruption)
+                        fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+                        self.cap.set(cv2.CAP_PROP_FOURCC, fourcc)
+                        
+                        # Set resolution and FPS before grabbing frames
+                        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                        self.cap.set(cv2.CAP_PROP_FPS, 30)
+                        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                        
+                        # Flush a few frames to clear the buffer
+                        for _ in range(5):
+                            self.cap.read()
+                        
+                        # Test if we can actually grab a valid frame
+                        ret, test_frame = self.cap.read()
+                        if ret and test_frame is not None and test_frame.size > 0:
+                            print(f"Camera {idx} opened successfully with {name} backend")
+                            print(f"Frame size: {test_frame.shape}")
+                            self.camera_index = idx
+                            camera_found = True
+                            break
+                        else:
+                            self.cap.release()
+                            print(f"Camera {idx} with {name} backend opened but couldn't grab valid frame")
                     else:
-                        self.cap.release()
-                        print(f"{name} backend opened but couldn't grab valid frame")
-                else:
-                    print(f"{name} backend failed to open camera")
+                        print(f"Camera {idx} with {name} backend failed to open")
+            
+            if not camera_found:
+                print("\n" + "="*60)
+                print("ERROR: Could not open camera!")
+                print("="*60)
+                print("Troubleshooting tips for your team:")
+                print("  1. Close other apps using camera (Zoom, Teams, Skype, etc.)")
+                print("  2. Windows: Settings > Privacy > Camera > Allow apps to access")
+                print("  3. Check if the laptop has a physical camera switch")
+                print("  4. Try restarting the laptop")
+                print("  5. Update camera drivers from Device Manager")
+                print("="*60 + "\n")
+                return False
         
         self.is_running = self.cap is not None and self.cap.isOpened()
         return self.is_running
@@ -348,6 +372,8 @@ class WebcamCapture:
             
             # Resize frame to 640x480 to avoid memory crash
             frame = cv2.resize(frame, (640, 480))
+            # Flip frame horizontally to fix mirror effect
+            frame = cv2.flip(frame, 1)
             return frame
         except Exception as e:
             print(f"Error reading frame: {e}")
