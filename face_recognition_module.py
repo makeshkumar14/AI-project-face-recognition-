@@ -372,6 +372,8 @@ class WebcamCapture:
             
             # Resize frame to 640x480 to avoid memory crash
             frame = cv2.resize(frame, (640, 480))
+            # Flip frame horizontally to fix mirror effect
+            frame = cv2.flip(frame, 1)
             return frame
         except Exception as e:
             print(f"Error reading frame: {e}")
