@@ -563,6 +563,8 @@ def video_feed():
                 
                 # Frame counter for voting system
                 frame_count = 0
+                last_advanced_results = []
+                last_basic_results = []
                 
                 while True:
                     frame = cam.read_frame()
@@ -577,34 +579,37 @@ def video_feed():
                     if session_obj.is_active:
                         try:
                             if use_advanced:
-                                # Advanced recognition with voting
-                                results = recognizer.recognize_frame(frame)
-                                recognizer.add_to_voting_buffer(results)
-                                
-                                # Check for confirmed recognition via voting
-                                voting_result = recognizer.get_voting_result()
-                                if voting_result and voting_result['status'] == 'confirmed':
-                                    # Mark attendance for confirmed recognition
-                                    name = voting_result['name']
-                                    confidence = voting_result['confidence']
+                                # Advanced recognition: Process every 5th frame to reduce lag
+                                if frame_count % 5 == 0:
+                                    results = recognizer.recognize_frame(frame)
+                                    recognizer.add_to_voting_buffer(results)
+                                    last_advanced_results = results
                                     
-                                    # Use name as roll_no (can be customized)
-                                    mark_present(name, confidence * 100)
-                                    print(f"Attendance marked: {name} (conf: {confidence:.2f})")
-                                    
-                                    # Clear buffer after successful recognition
-                                    recognizer.clear_voting_buffer()
+                                    # Check for confirmed recognition via voting
+                                    voting_result = recognizer.get_voting_result()
+                                    if voting_result and voting_result['status'] == 'confirmed':
+                                        # Mark attendance for confirmed recognition
+                                        name = voting_result['name']
+                                        confidence = voting_result['confidence']
+                                        
+                                        # Use name as roll_no (can be customized)
+                                        mark_present(name, confidence * 100)
+                                        print(f"Attendance marked: {name} (conf: {confidence:.2f})")
+                                        
+                                        # Clear buffer after successful recognition
+                                        recognizer.clear_voting_buffer()
                                 
-                                # Draw boxes on frame
-                                display_frame = draw_recognition_boxes(display_frame, results)
+                                # Draw boxes on frame using cached results
+                                display_frame = draw_recognition_boxes(display_frame, last_advanced_results)
                             else:
-                                # Fallback to basic recognition
-                                if frame_count % 3 == 0:
+                                # Fallback to basic recognition: Process every 5th frame
+                                if frame_count % 5 == 0:
                                     recognized = face_manager.recognize_faces(frame)
                                     for face in recognized:
                                         if face.get('roll_no') and face['roll_no'] != 'UNKNOWN':
                                             mark_present(face['roll_no'], face['confidence'])
-                                    display_frame = draw_face_boxes(display_frame, recognized)
+                                    last_basic_results = recognized
+                                display_frame = draw_face_boxes(display_frame, last_basic_results)
                                     
                         except Exception as e:
                             print(f"Recognition error: {e}")
@@ -620,8 +625,10 @@ def video_feed():
                     except Exception as e:
                         print(f"Frame encoding error: {e}")
                     
-                    # ~20 fps for advanced (heavier processing)
-                    time.sleep(0.05 if use_advanced else 0.033)
+                    # Small delay only when not actively predicting on this frame,
+                    # OpenCV cap.read() already blocks to match camera framerate
+                    if frame_count % 5 != 0:
+                        time.sleep(0.01)
                     
             finally:
                 cam.stop()
