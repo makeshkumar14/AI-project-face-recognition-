@@ -1,37 +1,48 @@
 """
 Database Models for Face Recognition Attendance System
-SQLite database with students, faculty, and attendance tables
+MySQL database with students, faculty, and attendance tables
 """
 
-import sqlite3
+import mysql.connector
 import os
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# Database file path
-DATABASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'database.db')
+# MySQL connection configuration (override via environment variables)
+MYSQL_CONFIG = {
+    'host': os.environ.get('MYSQL_HOST', 'localhost'),
+    'port': int(os.environ.get('MYSQL_PORT', 3306)),
+    'user': os.environ.get('MYSQL_USER', 'root'),
+    'password': os.environ.get('MYSQL_PASSWORD', ''),
+    'database': os.environ.get('MYSQL_DATABASE', 'face_recognition_db'),
+}
 
 
 def get_db_connection():
-    """Create and return a database connection with row factory."""
-    conn = sqlite3.connect(DATABASE_PATH)
-    conn.row_factory = sqlite3.Row
+    """Create and return a MySQL database connection."""
+    conn = mysql.connector.connect(**MYSQL_CONFIG)
     return conn
 
 
 def init_db():
-    """Initialize the database with required tables."""
-    conn = get_db_connection()
+    """Initialize the database and required tables."""
+    # First connect without specifying database to create it if needed
+    init_config = {k: v for k, v in MYSQL_CONFIG.items() if k != 'database'}
+    conn = mysql.connector.connect(**init_config)
     cursor = conn.cursor()
+    
+    db_name = MYSQL_CONFIG['database']
+    cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{db_name}`")
+    cursor.execute(f"USE `{db_name}`")
     
     # Create students table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS students (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            roll_no TEXT UNIQUE NOT NULL,
-            section TEXT NOT NULL,
-            image_path TEXT,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            roll_no VARCHAR(100) UNIQUE NOT NULL,
+            section VARCHAR(50) NOT NULL,
+            image_path VARCHAR(500),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -39,11 +50,11 @@ def init_db():
     # Create faculty table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS faculty (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            department TEXT,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            password_hash VARCHAR(500) NOT NULL,
+            department VARCHAR(255),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -52,22 +63,23 @@ def init_db():
     # Unique constraint prevents duplicate attendance for same student/subject/section/period/date
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS attendance (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            student_id INTEGER NOT NULL,
-            subject TEXT NOT NULL,
-            section TEXT NOT NULL,
-            period TEXT NOT NULL,
-            date TEXT NOT NULL,
-            time TEXT NOT NULL,
-            status TEXT CHECK(status IN ('PRESENT', 'ABSENT')) NOT NULL,
-            confidence REAL DEFAULT 0.0,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            student_id INT NOT NULL,
+            subject VARCHAR(255) NOT NULL,
+            section VARCHAR(50) NOT NULL,
+            period VARCHAR(50) NOT NULL,
+            date VARCHAR(20) NOT NULL,
+            time VARCHAR(20) NOT NULL,
+            status ENUM('PRESENT', 'ABSENT') NOT NULL,
+            confidence FLOAT DEFAULT 0.0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (student_id) REFERENCES students(id),
-            UNIQUE(student_id, subject, section, period, date)
+            UNIQUE KEY unique_attendance (student_id, subject, section, period, date)
         )
     ''')
     
     conn.commit()
+    cursor.close()
     conn.close()
     print("Database initialized successfully!")
 
@@ -106,19 +118,20 @@ def sync_enrolled_students():
         
         try:
             cursor.execute(
-                'INSERT INTO students (name, roll_no, section, image_path) VALUES (?, ?, ?, ?)',
+                'INSERT INTO students (name, roll_no, section, image_path) VALUES (%s, %s, %s, %s)',
                 (name, roll_no, section, image_path)
             )
             synced.append({'name': name, 'roll_no': roll_no, 'status': 'added'})
-        except sqlite3.IntegrityError:
+        except mysql.connector.IntegrityError:
             # Student already exists, update if needed
             cursor.execute(
-                'UPDATE students SET name = ?, image_path = ? WHERE roll_no = ?',
+                'UPDATE students SET name = %s, image_path = %s WHERE roll_no = %s',
                 (name, image_path, roll_no)
             )
             synced.append({'name': name, 'roll_no': roll_no, 'status': 'updated'})
     
     conn.commit()
+    cursor.close()
     conn.close()
     print(f"Synced {len(synced)} enrolled students to database")
     return synced
@@ -139,20 +152,22 @@ def clear_sample_students():
         enrolled_names = config.get('students', [])
     
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
     
     # Get all students
-    all_students = cursor.execute('SELECT roll_no FROM students').fetchall()
+    cursor.execute('SELECT roll_no FROM students')
+    all_students = cursor.fetchall()
     
     removed = 0
     for student in all_students:
         roll_no = student['roll_no']
         # Remove if not in enrolled list
         if roll_no not in enrolled_names:
-            cursor.execute('DELETE FROM students WHERE roll_no = ?', (roll_no,))
+            cursor.execute('DELETE FROM students WHERE roll_no = %s', (roll_no,))
             removed += 1
     
     conn.commit()
+    cursor.close()
     conn.close()
     print(f"Removed {removed} sample students not in enrolled list")
     return removed
@@ -161,15 +176,18 @@ def clear_sample_students():
 def add_student(name, roll_no, section='A', image_path=None):
     """Add a single student to database."""
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        conn.execute(
-            'INSERT INTO students (name, roll_no, section, image_path) VALUES (?, ?, ?, ?)',
+        cursor.execute(
+            'INSERT INTO students (name, roll_no, section, image_path) VALUES (%s, %s, %s, %s)',
             (name, roll_no, section, image_path or f'dataset/{name}')
         )
         conn.commit()
+        cursor.close()
         conn.close()
         return True
-    except sqlite3.IntegrityError:
+    except mysql.connector.IntegrityError:
+        cursor.close()
         conn.close()
         return False
 
@@ -196,13 +214,14 @@ def seed_sample_data():
         try:
             password_hash = generate_password_hash(password)
             cursor.execute(
-                'INSERT INTO faculty (name, email, password_hash, department) VALUES (?, ?, ?, ?)',
+                'INSERT INTO faculty (name, email, password_hash, department) VALUES (%s, %s, %s, %s)',
                 (name, email, password_hash, department)
             )
-        except sqlite3.IntegrityError:
+        except mysql.connector.IntegrityError:
             pass
     
     conn.commit()
+    cursor.close()
     conn.close()
     print("Database seeded with enrolled students and faculty!")
 
@@ -214,37 +233,46 @@ def seed_sample_data():
 def get_all_students(section=None):
     """Get all students, optionally filtered by section."""
     conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
     if section:
-        students = conn.execute(
-            'SELECT * FROM students WHERE section = ? ORDER BY roll_no',
+        cursor.execute(
+            'SELECT * FROM students WHERE section = %s ORDER BY roll_no',
             (section,)
-        ).fetchall()
+        )
     else:
-        students = conn.execute('SELECT * FROM students ORDER BY roll_no').fetchall()
+        cursor.execute('SELECT * FROM students ORDER BY roll_no')
+    students = cursor.fetchall()
+    cursor.close()
     conn.close()
-    return [dict(s) for s in students]
+    return students
 
 
 def get_student_by_roll_no(roll_no):
     """Get a student by roll number."""
     conn = get_db_connection()
-    student = conn.execute(
-        'SELECT * FROM students WHERE roll_no = ?',
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        'SELECT * FROM students WHERE roll_no = %s',
         (roll_no,)
-    ).fetchone()
+    )
+    student = cursor.fetchone()
+    cursor.close()
     conn.close()
-    return dict(student) if student else None
+    return student
 
 
 def get_student_by_id(student_id):
     """Get a student by ID."""
     conn = get_db_connection()
-    student = conn.execute(
-        'SELECT * FROM students WHERE id = ?',
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        'SELECT * FROM students WHERE id = %s',
         (student_id,)
-    ).fetchone()
+    )
+    student = cursor.fetchone()
+    cursor.close()
     conn.close()
-    return dict(student) if student else None
+    return student
 
 
 # ========================================
@@ -254,12 +282,15 @@ def get_student_by_id(student_id):
 def get_faculty_by_email(email):
     """Get a faculty member by email."""
     conn = get_db_connection()
-    faculty = conn.execute(
-        'SELECT * FROM faculty WHERE email = ?',
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        'SELECT * FROM faculty WHERE email = %s',
         (email,)
-    ).fetchone()
+    )
+    faculty = cursor.fetchone()
+    cursor.close()
     conn.close()
-    return dict(faculty) if faculty else None
+    return faculty
 
 
 def verify_faculty_password(email, password):
@@ -273,16 +304,19 @@ def verify_faculty_password(email, password):
 def add_faculty(name, email, password, department='Computer Science'):
     """Add a new faculty member to the database."""
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
         password_hash = generate_password_hash(password)
-        conn.execute(
-            'INSERT INTO faculty (name, email, password_hash, department) VALUES (?, ?, ?, ?)',
+        cursor.execute(
+            'INSERT INTO faculty (name, email, password_hash, department) VALUES (%s, %s, %s, %s)',
             (name, email, password_hash, department)
         )
         conn.commit()
+        cursor.close()
         conn.close()
         return True
-    except sqlite3.IntegrityError:
+    except mysql.connector.IntegrityError:
+        cursor.close()
         conn.close()
         return False
 
@@ -297,18 +331,21 @@ def mark_attendance(student_id, subject, section, period, date, time, status, co
     Returns True if successful, False if duplicate (already marked).
     """
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        conn.execute(
+        cursor.execute(
             '''INSERT INTO attendance 
                (student_id, subject, section, period, date, time, status, confidence)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''',
             (student_id, subject, section, period, date, time, status, confidence)
         )
         conn.commit()
+        cursor.close()
         conn.close()
         return True
-    except sqlite3.IntegrityError:
+    except mysql.connector.IntegrityError:
         # Duplicate entry - student already marked for this session
+        cursor.close()
         conn.close()
         return False
 
@@ -316,27 +353,30 @@ def mark_attendance(student_id, subject, section, period, date, time, status, co
 def update_attendance_status(student_id, subject, section, period, date, new_status, time=None):
     """Update an existing attendance record."""
     conn = get_db_connection()
+    cursor = conn.cursor()
     if time:
-        conn.execute(
+        cursor.execute(
             '''UPDATE attendance 
-               SET status = ?, time = ?
-               WHERE student_id = ? AND subject = ? AND section = ? AND period = ? AND date = ?''',
+               SET status = %s, time = %s
+               WHERE student_id = %s AND subject = %s AND section = %s AND period = %s AND date = %s''',
             (new_status, time, student_id, subject, section, period, date)
         )
     else:
-        conn.execute(
+        cursor.execute(
             '''UPDATE attendance 
-               SET status = ?
-               WHERE student_id = ? AND subject = ? AND section = ? AND period = ? AND date = ?''',
+               SET status = %s
+               WHERE student_id = %s AND subject = %s AND section = %s AND period = %s AND date = %s''',
             (new_status, student_id, subject, section, period, date)
         )
     conn.commit()
+    cursor.close()
     conn.close()
 
 
 def get_attendance(subject=None, section=None, period=None, date=None, student_id=None):
     """Get attendance records with optional filters."""
     conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
     
     query = '''
         SELECT a.*, s.name as student_name, s.roll_no
@@ -347,53 +387,61 @@ def get_attendance(subject=None, section=None, period=None, date=None, student_i
     params = []
     
     if subject:
-        query += ' AND a.subject = ?'
+        query += ' AND a.subject = %s'
         params.append(subject)
     if section:
-        query += ' AND a.section = ?'
+        query += ' AND a.section = %s'
         params.append(section)
     if period:
-        query += ' AND a.period = ?'
+        query += ' AND a.period = %s'
         params.append(period)
     if date:
-        query += ' AND a.date = ?'
+        query += ' AND a.date = %s'
         params.append(date)
     if student_id:
-        query += ' AND a.student_id = ?'
+        query += ' AND a.student_id = %s'
         params.append(student_id)
     
     query += ' ORDER BY a.time DESC'
     
-    records = conn.execute(query, params).fetchall()
+    cursor.execute(query, params)
+    records = cursor.fetchall()
+    cursor.close()
     conn.close()
-    return [dict(r) for r in records]
+    return records
 
 
 def get_student_attendance_history(roll_no, limit=50):
     """Get attendance history for a specific student."""
     conn = get_db_connection()
-    records = conn.execute('''
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute('''
         SELECT a.*, s.name as student_name, s.roll_no
         FROM attendance a
         JOIN students s ON a.student_id = s.id
-        WHERE s.roll_no = ?
+        WHERE s.roll_no = %s
         ORDER BY a.date DESC, a.time DESC
-        LIMIT ?
-    ''', (roll_no, limit)).fetchall()
+        LIMIT %s
+    ''', (roll_no, limit))
+    records = cursor.fetchall()
+    cursor.close()
     conn.close()
-    return [dict(r) for r in records]
+    return records
 
 
 def check_attendance_exists(student_id, subject, section, period, date):
     """Check if attendance already exists for a student in this session."""
     conn = get_db_connection()
-    record = conn.execute(
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
         '''SELECT * FROM attendance 
-           WHERE student_id = ? AND subject = ? AND section = ? AND period = ? AND date = ?''',
+           WHERE student_id = %s AND subject = %s AND section = %s AND period = %s AND date = %s''',
         (student_id, subject, section, period, date)
-    ).fetchone()
+    )
+    record = cursor.fetchone()
+    cursor.close()
     conn.close()
-    return dict(record) if record else None
+    return record
 
 
 # Initialize database when module is imported

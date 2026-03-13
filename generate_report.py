@@ -109,7 +109,7 @@ def build_report():
 
     info2 = doc.add_paragraph()
     info2.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = info2.add_run('Technology: Python | Flask | PyTorch | OpenCV | SQLite')
+    run = info2.add_run('Technology: Python | Flask | PyTorch | OpenCV | MySQL')
     run.font.size = Pt(12)
     run.font.color.rgb = RGBColor(0x64, 0x74, 0x8B)
     run.font.name = 'Calibri'
@@ -171,7 +171,7 @@ def build_report():
             ['Flask', '≥ 2.3.0', 'Web framework (REST API + template rendering)'],
             ['flask-cors', '≥ 4.0.0', 'Cross-Origin Resource Sharing for API endpoints'],
             ['Werkzeug', '≥ 2.3.0', 'Password hashing (generate_password_hash, check_password_hash)'],
-            ['SQLite', 'Built-in', 'Lightweight relational database (no external DB server needed)'],
+            ['MySQL', '8.0+', 'Production-grade relational database for concurrent access'],
         ]
     )
 
@@ -225,7 +225,7 @@ def build_report():
         ('Attendance Logic (attendance_logic.py)', 'Thread-safe session management, business rules, duplicate prevention'),
         ('Advanced Face Recognition', 'MTCNN detection → FaceNet embedding → cosine similarity → multi-frame voting'),
         ('Fallback Face Recognition', 'Haar Cascade detection → LBPH recognizer (when PyTorch unavailable)'),
-        ('Database (models.py → SQLite)', 'Students, faculty, and attendance CRUD operations'),
+        ('Database (models.py → MySQL)', 'Students, faculty, and attendance CRUD operations'),
         ('Embedding Store (.npy files)', 'Pre-computed 512D face embeddings for each enrolled student'),
     ]
     for name, desc in arch_items:
@@ -242,7 +242,7 @@ def build_report():
             ['app.py', '574', 'Main Flask application — routes, video feed, Excel export'],
             ['advanced_face_recognition.py', '893', 'MTCNN detector, FaceNet embedder, voting system, enrollment'],
             ['face_recognition_module.py', '475', 'Haar Cascade + LBPH fallback recognition, webcam capture'],
-            ['models.py', '383', 'SQLite database schema, CRUD operations'],
+            ['models.py', '383', 'MySQL database schema, CRUD operations'],
             ['attendance_logic.py', '352', 'Session management, thread-safe attendance marking'],
             ['routes/auth.py', '166', 'Login/logout/session API endpoints'],
             ['routes/attendance.py', '431', 'Start/stop attendance, export CSV, student history'],
@@ -309,7 +309,7 @@ def build_report():
     # ==========================================================
     doc.add_heading('5. Database Schema', level=1)
     doc.add_paragraph(
-        'The system uses SQLite with three core tables. A unique constraint on the attendance table '
+        'The system uses MySQL with three core tables. A unique constraint on the attendance table '
         'prevents duplicate marks for the same student/subject/section/period/date combination.'
     )
 
@@ -475,7 +475,7 @@ def build_report():
     add_styled_table(doc,
         ['#', 'Enhancement', 'Description'],
         [
-            ['16', 'PostgreSQL/MySQL Migration', 'Replace SQLite with a production-grade database for concurrent access'],
+            ['16', 'Database Optimization', 'Optimize MySQL queries and add indexing for concurrent access'],
             ['17', 'Docker Containerization', 'Dockerize the application for easy deployment and consistency'],
             ['18', 'Role-Based Access Control (RBAC)', 'Fine-grained permissions (admin, faculty, student, viewer)'],
             ['19', 'Audit Logging', 'Track all actions (session starts, manual overrides, etc.)'],
@@ -496,7 +496,7 @@ def build_report():
         'High-precision mode with multi-frame voting reduces false attendance marking',
         'Automatic threshold optimization adapts to enrolled faces automatically',
         'Data augmentation during enrollment improves recognition under varying conditions',
-        'Self-contained — SQLite + embedded models, no external services required',
+        'Production-ready — MySQL + embedded models for reliable data storage',
         'Clean modular design — separate modules for recognition, attendance, routing, and models',
     ]
     for s in strengths:
@@ -508,7 +508,7 @@ def build_report():
         'CPU-only — no GPU acceleration, may be slow with many students',
         'Single-session — only one attendance session can run at a time (global singleton)',
         'No liveness detection — vulnerable to photo spoofing attacks',
-        'SQLite — not suitable for concurrent multi-user production environments',
+        'Requires MySQL server setup and configuration',
         'Flask dev server — not production-ready (no Gunicorn/Nginx)',
         'No automated tests — no unit or integration test suite',
     ]
