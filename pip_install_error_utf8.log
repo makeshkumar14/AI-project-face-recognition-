@@ -1,0 +1,181 @@
+﻿Collecting facenet-pytorch
+  Using cached facenet_pytorch-2.6.0-py3-none-any.whl.metadata (12 kB)
+Collecting scikit-learn
+  Using cached scikit_learn-1.8.0-cp314-cp314-win_amd64.whl.metadata (11 kB)
+Collecting scipy
+  Using cached scipy-1.17.1-cp314-cp314-win_amd64.whl.metadata (60 kB)
+Collecting joblib
+  Using cached joblib-1.5.3-py3-none-any.whl.metadata (5.5 kB)
+Collecting threadpoolctl
+  Using cached threadpoolctl-3.6.0-py3-none-any.whl.metadata (13 kB)
+Collecting numpy<2.0.0,>=1.24.0 (from facenet-pytorch)
+  Using cached numpy-1.26.4.tar.gz (15.8 MB)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Installing backend dependencies: started
+  Installing backend dependencies: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'error'
+pip :   error: subproce
+ss-exited-with-error
+At line:1 char:1
++ pip install 
+facenet-pytorch 
+scikit-learn scipy 
+joblib threadpoolctl > 
+...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (  error: subp   
+ rocess-exited-with    
+-error:String) [],     
+RemoteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+  
+  Preparing metadata 
+(pyproject.toml) did 
+not run successfully.
+  exit code: 1
+  
+  [21 lines of output]
+  + C:\Users\kavin\AppD
+ata\Local\Programs\Pyth
+on\Python314\python.exe
+ C:\Users\kavin\AppData
+\Local\Temp\pip-install
+-vm7sjkgx\numpy_991ff0e
+f7671431b8381bf119c3805
+e0\vendored-meson\meson
+\meson.py setup C:\User
+s\kavin\AppData\Local\T
+emp\pip-install-vm7sjkg
+x\numpy_991ff0ef7671431
+b8381bf119c3805e0 C:\Us
+ers\kavin\AppData\Local
+\Temp\pip-install-vm7sj
+kgx\numpy_991ff0ef76714
+31b8381bf119c3805e0\.me
+sonpy-ke7jfifr 
+-Dbuildtype=release 
+-Db_ndebug=if-release 
+-Db_vscrt=md --native-f
+ile=C:\Users\kavin\AppD
+ata\Local\Temp\pip-inst
+all-vm7sjkgx\numpy_991f
+f0ef7671431b8381bf119c3
+805e0\.mesonpy-ke7jfifr
+\meson-python-native-fi
+le.ini
+  The Meson build 
+system
+  Version: 1.2.99
+  Source dir: C:\Users\
+kavin\AppData\Local\Tem
+p\pip-install-vm7sjkgx\
+numpy_991ff0ef7671431b8
+381bf119c3805e0
+  Build dir: C:\Users\k
+avin\AppData\Local\Temp
+\pip-install-vm7sjkgx\n
+umpy_991ff0ef7671431b83
+81bf119c3805e0\.mesonpy
+-ke7jfifr
+  Build type: native 
+build
+  Project name: NumPy
+  Project version: 
+1.26.4
+  WARNING: Failed to 
+activate VS 
+environment: Could not 
+parse vswhere.exe 
+output
+  
+  ..\meson.build:1:0: 
+ERROR: Unknown 
+compiler(s): [['icl'], 
+['cl'], ['cc'], 
+['gcc'], ['clang'], 
+['clang-cl'], ['pgcc']]
+  The following 
+exception(s) were 
+encountered:
+  Running `icl ""` 
+gave "[WinError 2] The 
+system cannot find the 
+file specified"
+  Running `cl /?` gave 
+"[WinError 2] The 
+system cannot find the 
+file specified"
+  Running `cc 
+--version` gave 
+"[WinError 2] The 
+system cannot find the 
+file specified"
+  Running `gcc 
+--version` gave 
+"[WinError 2] The 
+system cannot find the 
+file specified"
+  Running `clang 
+--version` gave 
+"[WinError 2] The 
+system cannot find the 
+file specified"
+  Running `clang-cl 
+/?` gave "[WinError 2] 
+The system cannot find 
+the file specified"
+  Running `pgcc 
+--version` gave 
+"[WinError 2] The 
+system cannot find the 
+file specified"
+  
+  A full log can be 
+found at C:\Users\kavin
+\AppData\Local\Temp\pip
+-install-vm7sjkgx\numpy
+_991ff0ef7671431b8381bf
+119c3805e0\.mesonpy-ke7
+jfifr\meson-logs\meson-
+log.txt
+  [end of output]
+  
+  note: This error 
+originates from a 
+subprocess, and is 
+likely not a problem 
+with pip.
+
+[notice] A new release 
+of pip is available: 
+25.2 -> 26.0.1
+[notice] To update, 
+run: python.exe -m pip 
+install --upgrade pip
+error: metadata-generat
+ion-failed
+
+Encountered error 
+while generating 
+package metadata.
+
+See above for output.
+
+note: This is an issue 
+with the package 
+mentioned above, not 
+pip.
+hint: See above for 
+details.
