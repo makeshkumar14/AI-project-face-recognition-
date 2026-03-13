@@ -100,7 +100,7 @@ def sync_enrolled_students():
     synced = []
     for i, name in enumerate(enrolled_names, start=1):
         # Use name as roll_no (or generate one)
-        roll_no = name  # Using name as roll_no for simplicity
+        roll_no = name.upper()  # Using uppercase name as roll_no for simplicity
         student_name = name
         section = 'A'  # Default section
         image_path = f'dataset/{name}'
@@ -134,11 +134,12 @@ def clear_sample_students():
     embeddings_path = Path(os.path.dirname(os.path.abspath(__file__))) / 'dataset' / 'embeddings'
     config_path = embeddings_path / 'config.json'
     
-    enrolled_names = []
+    enrolled_names_upper = []
     if config_path.exists():
         with open(config_path, 'r') as f:
             config = json.load(f)
         enrolled_names = config.get('students', [])
+        enrolled_names_upper = [n.upper() for n in enrolled_names]
     
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -150,7 +151,7 @@ def clear_sample_students():
     for student in all_students:
         roll_no = student['roll_no']
         # Remove if not in enrolled list
-        if roll_no not in enrolled_names:
+        if roll_no.upper() not in enrolled_names_upper:
             cursor.execute('DELETE FROM students WHERE roll_no = ?', (roll_no,))
             removed += 1
     
