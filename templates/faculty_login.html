@@ -19,44 +19,113 @@
     <!-- Login Container -->
     <div class="login-container">
         <div class="login-card fade-in">
-            <!-- Login Header -->
-            <div class="login-header">
-                <div class="login-header-icon">
-                    👨‍🏫
-                </div>
-                <h2>Faculty Login</h2>
-                <p>Access your attendance dashboard</p>
+
+            <!-- Tab Switcher -->
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchTab('signin')" id="signinTab">
+                    <span class="auth-tab-icon">🔑</span> Sign in
+                </button>
+                <button class="auth-tab" onclick="switchTab('register')" id="registerTab">
+                    <span class="auth-tab-icon">👤</span> Register
+                </button>
             </div>
 
-            <!-- Login Form -->
-            <form class="login-form" action="{{ url_for('faculty_login') }}" method="POST">
-                <div class="form-group">
-                    <label class="form-label" for="facultyId">Faculty ID / Email</label>
-                    <input type="text" id="facultyId" name="faculty_id" class="form-input"
-                        placeholder="Enter your faculty ID or email" required autocomplete="username">
+            <!-- Avatar -->
+            <div class="auth-avatar">👨‍🏫</div>
+
+            <!-- Flash Messages -->
+            {% if message %}
+            <div class="auth-message {{ message_type or 'error' }}">
+                {{ message }}
+                {% if show_register_option %}
+                <br><a href="#" onclick="switchTab('register')" style="color: inherit; text-decoration: underline; margin-top: 5px; display: inline-block;">Register a new account here</a>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Sign In Panel -->
+            <div class="auth-panel active" id="signinPanel">
+                <form class="auth-form" action="{{ url_for('faculty_login') }}" method="POST">
+                    <div class="form-group">
+                        <label class="form-label" for="facultyId">Username or e-mail</label>
+                        <input type="text" id="facultyId" name="faculty_id" class="form-input"
+                            placeholder="Enter your faculty ID or email" required autocomplete="username">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="signinPassword">Password</label>
+                        <input type="password" id="signinPassword" name="password" class="form-input"
+                            placeholder="Enter your password" required autocomplete="current-password">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        Sign in
+                    </button>
+                </form>
+
+                <div class="auth-switch">
+                    <a onclick="switchTab('register')">register</a>
                 </div>
+            </div>
 
-                <div class="form-group">
-                    <label class="form-label" for="password">Password</label>
-                    <input type="password" id="password" name="password" class="form-input"
-                        placeholder="Enter your password" required autocomplete="current-password">
+            <!-- Register Panel -->
+            <div class="auth-panel" id="registerPanel">
+                <form class="auth-form" action="{{ url_for('faculty_register') }}" method="POST">
+                    <div class="form-group">
+                        <label class="form-label" for="regName">Full Name</label>
+                        <input type="text" id="regName" name="name" class="form-input"
+                            placeholder="Enter your full name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="regEmail">Username or e-mail</label>
+                        <input type="email" id="regEmail" name="email" class="form-input"
+                            placeholder="Enter your email" required autocomplete="email">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="regPassword">Password</label>
+                        <input type="password" id="regPassword" name="password" class="form-input"
+                            placeholder="Enter a password" required autocomplete="new-password">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="regConfirm">Confirm password</label>
+                        <input type="password" id="regConfirm" name="confirm_password" class="form-input"
+                            placeholder="Confirm your password" required autocomplete="new-password">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        Register
+                    </button>
+                </form>
+
+                <div class="auth-switch">
+                    <a onclick="switchTab('signin')">sign in</a>
                 </div>
+            </div>
 
-                <button type="submit" class="btn btn-primary btn-lg">
-                    <span class="btn-icon">🔐</span>
-                    Login to Dashboard
-                </button>
-            </form>
-
-            <!-- Login Footer -->
+            <!-- Footer -->
             <div class="login-footer">
-                <p>Not a faculty member? <a href="{{ url_for('student_login') }}">Student Login</a></p>
-                <p class="mt-2"><a href="{{ url_for('role_select') }}">← Back to Home</a></p>
+                <p><a href="{{ url_for('role_select') }}">← Back to Home</a></p>
             </div>
         </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        function switchTab(tab) {
+            document.getElementById('signinTab').classList.toggle('active', tab === 'signin');
+            document.getElementById('registerTab').classList.toggle('active', tab === 'register');
+            document.getElementById('signinPanel').classList.toggle('active', tab === 'signin');
+            document.getElementById('registerPanel').classList.toggle('active', tab === 'register');
+        }
+
+        // Auto-switch to register tab if redirected after registration or if sign-in failed
+        {% if show_register or show_register_option %}
+        switchTab('register');
+        {% endif %}
+    </script>
 </body>
 
 </html>

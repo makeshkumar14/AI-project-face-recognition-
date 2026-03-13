@@ -188,6 +188,9 @@ def seed_sample_data():
     faculty_data = [
         ('Prof. Sharma', 'sharma@college.edu', 'password123', 'Computer Science'),
         ('Prof. Gupta', 'gupta@college.edu', 'password123', 'Computer Science'),
+        ('Prof. Reddy', 'reddy@college.edu', 'password123', 'Electronics'),
+        ('Prof. Iyer', 'iyer@college.edu', 'password123', 'Mathematics'),
+        ('Prof. Patel', 'patel@college.edu', 'password123', 'Mechanical'),
         ('Admin', 'admin@college.edu', 'admin123', 'Administration'),
     ]
     
@@ -267,6 +270,23 @@ def verify_faculty_password(email, password):
     if faculty and check_password_hash(faculty['password_hash'], password):
         return faculty
     return None
+
+
+def add_faculty(name, email, password, department='Computer Science'):
+    """Add a new faculty member to the database."""
+    conn = get_db_connection()
+    try:
+        password_hash = generate_password_hash(password)
+        conn.execute(
+            'INSERT INTO faculty (name, email, password_hash, department) VALUES (?, ?, ?, ?)',
+            (name, email, password_hash, department)
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except sqlite3.IntegrityError:
+        conn.close()
+        return False
 
 
 # ========================================
