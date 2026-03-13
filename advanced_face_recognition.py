@@ -823,6 +823,8 @@ def get_recognizer() -> AdvancedFaceRecognizer:
         if config_path.exists():
             with open(config_path, 'r') as f:
                 config = json.load(f)
+                if isinstance(config, list):
+                    config = config[-1] if config else {}
                 _recognizer.set_threshold(config.get('threshold', DEFAULT_THRESHOLD))
     
     return _recognizer

@@ -92,6 +92,10 @@ def sync_enrolled_students():
     with open(config_path, 'r') as f:
         config = json.load(f)
     
+    # Handle case where config is a list (take last entry)
+    if isinstance(config, list):
+        config = config[-1] if config else {}
+    
     enrolled_names = config.get('students', [])
     
     conn = get_db_connection()
@@ -138,6 +142,11 @@ def clear_sample_students():
     if config_path.exists():
         with open(config_path, 'r') as f:
             config = json.load(f)
+        
+        # Handle case where config is a list (take last entry)
+        if isinstance(config, list):
+            config = config[-1] if config else {}
+            
         enrolled_names = config.get('students', [])
         enrolled_names_upper = [n.upper() for n in enrolled_names]
     
