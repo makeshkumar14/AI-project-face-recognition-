@@ -24,3 +24,5 @@ openpyxl>=3.1.0
 # Database
 # SQLite is built into Python, no external package needed
 
+# Utilities
+tqdm>=4.65.0
