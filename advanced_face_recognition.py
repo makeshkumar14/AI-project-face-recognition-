@@ -500,6 +500,10 @@ class ThresholdOptimizer:
                     best_precision = precision
                     best_threshold = thresh
         
+        # Cap the threshold so it's not overly strict causing constant "Unknown" flips
+        if best_threshold > 0.55:
+            best_threshold = 0.55
+
         logger.info(f"Optimal threshold: {best_threshold:.3f} (precision: {best_precision:.3f})")
         return best_threshold
 
