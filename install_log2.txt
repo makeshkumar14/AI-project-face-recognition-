@@ -1,0 +1,28 @@
+Defaulting to user installation because normal site-packages is not writeable
+Collecting torch
+  Downloading torch-2.10.0-cp313-cp313-win_amd64.whl.metadata (31 kB)
+Collecting torchvision
+  Downloading torchvision-0.25.0-cp313-cp313-win_amd64.whl.metadata (5.4 kB)
+Requirement already satisfied: filelock in c:\users\ratch_03imv4c\appdata\local\packages\pythonsoftwarefoundation.python.3.13_qbz5n2kfra8p0\localcache\local-packages\python313\site-packages (from torch) (3.20.0)
+Requirement already satisfied: typing-extensions>=4.10.0 in c:\users\ratch_03imv4c\appdata\local\packages\pythonsoftwarefoundation.python.3.13_qbz5n2kfra8p0\localcache\local-packages\python313\site-packages (from torch) (4.15.0)
+Requirement already satisfied: sympy>=1.13.3 in c:\users\ratch_03imv4c\appdata\local\packages\pythonsoftwarefoundation.python.3.13_qbz5n2kfra8p0\localcache\local-packages\python313\site-packages (from torch) (1.14.0)
+Requirement already satisfied: networkx>=2.5.1 in c:\users\ratch_03imv4c\appdata\local\packages\pythonsoftwarefoundation.python.3.13_qbz5n2kfra8p0\localcache\local-packages\python313\site-packages (from torch) (3.6.1)
+Requirement already satisfied: jinja2 in c:\users\ratch_03imv4c\appdata\local\packages\pythonsoftwarefoundation.python.3.13_qbz5n2kfra8p0\localcache\local-packages\python313\site-packages (from torch) (3.1.6)
+Requirement already satisfied: fsspec>=0.8.5 in c:\users\ratch_03imv4c\appdata\local\packages\pythonsoftwarefoundation.python.3.13_qbz5n2kfra8p0\localcache\local-packages\python313\site-packages (from torch) (2025.12.0)
+Requirement already satisfied: setuptools in c:\users\ratch_03imv4c\appdata\local\packages\pythonsoftwarefoundation.python.3.13_qbz5n2kfra8p0\localcache\local-packages\python313\site-packages (from torch) (70.2.0)
+Requirement already satisfied: numpy in c:\users\ratch_03imv4c\appdata\local\packages\pythonsoftwarefoundation.python.3.13_qbz5n2kfra8p0\localcache\local-packages\python313\site-packages (from torchvision) (2.4.2)
+Requirement already satisfied: pillow!=8.3.*,>=5.3.0 in c:\users\ratch_03imv4c\appdata\local\packages\pythonsoftwarefoundation.python.3.13_qbz5n2kfra8p0\localcache\local-packages\python313\site-packages (from torchvision) (12.1.0)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in c:\users\ratch_03imv4c\appdata\local\packages\pythonsoftwarefoundation.python.3.13_qbz5n2kfra8p0\localcache\local-packages\python313\site-packages (from sympy>=1.13.3->torch) (1.3.0)
+Requirement already satisfied: MarkupSafe>=2.0 in c:\users\ratch_03imv4c\appdata\local\packages\pythonsoftwarefoundation.python.3.13_qbz5n2kfra8p0\localcache\local-packages\python313\site-packages (from jinja2->torch) (3.0.3)
+Downloading torch-2.10.0-cp313-cp313-win_amd64.whl (113.8 MB)
+   ---------------------------------------- 113.8/113.8 MB 4.8 MB/s  0:00:23
+Downloading torchvision-0.25.0-cp313-cp313-win_amd64.whl (4.3 MB)
+   ---------------------------------------- 4.3/4.3 MB 7.8 MB/s  0:00:00
+Installing collected packages: torch, torchvision
+ERROR: Could not install packages due to an OSError: [Errno 2] No such file or directory: 'C:\\Users\\ratch_03imv4c\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\torch\\include\\ATen\\native\\transformers\\cuda\\mem_eff_attention\\iterators\\predicated_tile_access_iterator_residual_last.h'
+HINT: This error might have occurred since this system does not have Windows Long Path support enabled. You can find information on how to enable this at https://pip.pypa.io/warnings/enable-long-paths
+
+
+
+[notice] A new release of pip is available: 25.3 -> 26.0.1
+[notice] To update, run: C:\Users\ratch_03imv4c\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\python.exe -m pip install --upgrade pip
