@@ -323,6 +323,11 @@ function stopAttendance() {
       addLogEntry("Attendance session stopped - Camera deactivated", "info");
 
       showNotification("Attendance stopped successfully!", "info");
+
+      // Reload attendance data to show final present/absent lists
+      setTimeout(() => {
+        loadAttendanceData();
+      }, 1000);
     })
     .catch((error) => {
       console.error("Error stopping attendance:", error);
@@ -626,66 +631,49 @@ function renderAbsentTable(data) {
 function markStudentPresent(studentId, studentName) {
   if (!window.attendanceData) return;
 
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const confidence = (95 + Math.random() * 5).toFixed(1);
+  // Call backend API to mark present
+  fetch("/api/mark_present", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ roll_no: studentId }),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      // Reload attendance data from backend
+      loadAttendanceData();
 
-  // Add to present list
-  const newPresentStudent = {
-    id: studentId,
-    name: studentName,
-    time: timeStr,
-    confidence: parseFloat(confidence),
-  };
-  window.attendanceData.present.push(newPresentStudent);
-
-  // Remove from absent list
-  window.attendanceData.absent = window.attendanceData.absent.filter(
-    (s) => s.id !== studentId,
-  );
-
-  // Re-render both tables
-  renderPresentTable(window.attendanceData.present);
-  renderAbsentTable(window.attendanceData.absent);
-
-  // Update counts
-  studentsMarkedCount = window.attendanceData.present.length;
-  updateStudentsMarked(studentsMarkedCount);
-
-  // Log and notify
-  addLogEntry(`${studentName} manually marked present`, "success");
-  showNotification(`${studentName} marked present!`, "success");
+      // Log and notify
+      addLogEntry(`${studentName} manually marked present`, "success");
+      showNotification(`${studentName} marked present!`, "success");
+    })
+    .catch((error) => {
+      console.error("Error marking present:", error);
+      showNotification(`Failed to mark ${studentName} present`, "error");
+    });
 }
 
 function markStudentAbsent(studentId, studentName) {
   if (!window.attendanceData) return;
 
-  // Remove from present list
-  window.attendanceData.present = window.attendanceData.present.filter(
-    (s) => s.id !== studentId,
-  );
+  // Call backend API to mark absent
+  fetch("/api/mark_absent", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ roll_no: studentId }),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      // Reload attendance data from backend
+      loadAttendanceData();
 
-  // Add to absent list
-  const absentStudent = {
-    id: studentId,
-    name: studentName,
-  };
-  window.attendanceData.absent.push(absentStudent);
-
-  // Re-render both tables
-  renderPresentTable(window.attendanceData.present);
-  renderAbsentTable(window.attendanceData.absent);
-
-  // Update counts
-  studentsMarkedCount = window.attendanceData.present.length;
-  updateStudentsMarked(studentsMarkedCount);
-
-  // Log and notify
-  addLogEntry(`${studentName} marked absent`, "warning");
-  showNotification(`${studentName} marked absent!`, "warning");
+      // Log and notify
+      addLogEntry(`${studentName} marked absent`, "warning");
+      showNotification(`${studentName} marked absent!`, "warning");
+    })
+    .catch((error) => {
+      console.error("Error marking absent:", error);
+      showNotification(`Failed to mark ${studentName} absent`, "error");
+    });
 }
 
 function markAllPresent() {

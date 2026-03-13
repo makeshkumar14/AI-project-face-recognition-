@@ -523,6 +523,128 @@ h4 {
 }
 
 /* ========================================
+   Auth Tabs (Sign In / Register)
+   ======================================== */
+.auth-tabs {
+    display: flex;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 50px;
+    padding: 4px;
+    margin-bottom: 32px;
+}
+
+.auth-tab {
+    flex: 1;
+    padding: 12px 20px;
+    text-align: center;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 50px;
+    transition: all var(--transition-normal);
+    border: none;
+    background: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.auth-tab:hover {
+    color: var(--text-secondary);
+}
+
+.auth-tab.active {
+    background: var(--primary-gradient);
+    color: var(--text-primary);
+    box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+}
+
+.auth-tab-icon {
+    font-size: 1.1rem;
+}
+
+.auth-avatar {
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    font-size: 2.5rem;
+    color: var(--text-muted);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.auth-panel {
+    display: none;
+    animation: authFadeIn 0.3s ease;
+}
+
+.auth-panel.active {
+    display: block;
+}
+
+@keyframes authFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.auth-form .btn {
+    width: 100%;
+    margin-top: 16px;
+}
+
+.auth-switch {
+    text-align: center;
+    margin-top: 24px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.auth-switch a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color var(--transition-fast);
+}
+
+.auth-switch a:hover {
+    color: var(--secondary-color);
+}
+
+.auth-message {
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    animation: authFadeIn 0.3s ease;
+}
+
+.auth-message.success {
+    background: rgba(72, 187, 120, 0.15);
+    color: var(--accent-success);
+    border: 1px solid rgba(72, 187, 120, 0.3);
+}
+
+.auth-message.error {
+    background: rgba(252, 129, 129, 0.15);
+    color: var(--accent-danger);
+    border: 1px solid rgba(252, 129, 129, 0.3);
+}
+
+/* ========================================
    Dashboard Layout
    ======================================== */
 .dashboard {

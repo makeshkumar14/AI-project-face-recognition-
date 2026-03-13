@@ -52,28 +52,37 @@ def role_select():
 
 @app.route('/faculty_login', methods=['GET', 'POST'])
 def faculty_login():
-    """Faculty login page"""
+    """Faculty login page - sign in only, no registration"""
+    message = request.args.get('message')
+    message_type = request.args.get('message_type', 'error')
+    
     if request.method == 'POST':
-        faculty_id = request.form.get('faculty_id')
-        password = request.form.get('password')
+        faculty_id = request.form.get('faculty_id', '').strip()
+        password = request.form.get('password', '')
+        
+        if not faculty_id or not password:
+            return render_template('faculty_login.html',
+                                 message='Email and password are required.',
+                                 message_type='error')
         
         # Import here to avoid circular imports
-        from models import verify_faculty_password, get_faculty_by_email
+        from models import verify_faculty_password
         
-        # Try to verify with email/password
+        # Strictly verify credentials against the database
         faculty = verify_faculty_password(faculty_id, password)
         
-        if not faculty:
-            # Also try direct ID match for demo purposes
-            faculty = get_faculty_by_email(faculty_id)
-        
-        if faculty_id and password:
+        if faculty:
             session['user_type'] = 'faculty'
-            session['user_id'] = faculty_id
-            session['user_name'] = faculty['name'] if faculty else 'Faculty'
+            session['user_id'] = faculty['id']
+            session['user_name'] = faculty['name']
             return redirect(url_for('select_subject'))
+        else:
+            return render_template('faculty_login.html',
+                                 message='Invalid credentials. Please register if you do not have an account.',
+                                 message_type='error',
+                                 show_register_option=True)
         
-    return render_template('faculty_login.html')
+    return render_template('faculty_login.html', message=message, message_type=message_type)
 
 
 @app.route('/select_subject', methods=['GET', 'POST'])
@@ -114,6 +123,9 @@ def select_class():
 @app.route('/student_login', methods=['GET', 'POST'])
 def student_login():
     """Student login page"""
+    message = request.args.get('message')
+    message_type = request.args.get('message_type', 'error')
+    
     if request.method == 'POST':
         roll_number = request.form.get('roll_number')
         password = request.form.get('password')
@@ -127,7 +139,88 @@ def student_login():
             session['user_name'] = student['name'] if student else 'Student'
             return redirect(url_for('student_dashboard'))
         
-    return render_template('student_login.html')
+    return render_template('student_login.html', message=message, message_type=message_type)
+
+
+@app.route('/faculty_register', methods=['POST'])
+def faculty_register():
+    """Faculty registration endpoint"""
+    name = request.form.get('name', '').strip()
+    email = request.form.get('email', '').strip()
+    password = request.form.get('password', '')
+    confirm_password = request.form.get('confirm_password', '')
+    
+    if not name or not email or not password:
+        return render_template('faculty_login.html', 
+                             message='All fields are required', 
+                             message_type='error',
+                             show_register=True)
+    
+    if password != confirm_password:
+        return render_template('faculty_login.html', 
+                             message='Passwords do not match', 
+                             message_type='error',
+                             show_register=True)
+    
+    if len(password) < 4:
+        return render_template('faculty_login.html', 
+                             message='Password must be at least 4 characters', 
+                             message_type='error',
+                             show_register=True)
+    
+    from models import add_faculty
+    success = add_faculty(name, email, password)
+    
+    if success:
+        return redirect(url_for('faculty_login', 
+                               message='Registration successful! Please sign in.',
+                               message_type='success'))
+    else:
+        return render_template('faculty_login.html', 
+                             message='Email already registered', 
+                             message_type='error',
+                             show_register=True)
+
+
+@app.route('/student_register', methods=['POST'])
+def student_register():
+    """Student registration endpoint"""
+    name = request.form.get('name', '').strip()
+    roll_number = request.form.get('roll_number', '').strip().upper()
+    section = request.form.get('section', '').strip().upper()
+    password = request.form.get('password', '')
+    confirm_password = request.form.get('confirm_password', '')
+    
+    if not name or not roll_number or not section or not password:
+        return render_template('student_login.html', 
+                             message='All fields are required', 
+                             message_type='error',
+                             show_register=True)
+    
+    if password != confirm_password:
+        return render_template('student_login.html', 
+                             message='Passwords do not match', 
+                             message_type='error',
+                             show_register=True)
+    
+    if len(password) < 4:
+        return render_template('student_login.html', 
+                             message='Password must be at least 4 characters', 
+                             message_type='error',
+                             show_register=True)
+    
+    from models import add_student
+    success = add_student(name, roll_number, section)
+    
+    if success:
+        return redirect(url_for('student_login', 
+                               message='Registration successful! Please sign in.',
+                               message_type='success'))
+    else:
+        return render_template('student_login.html', 
+                             message='Roll number already registered', 
+                             message_type='error',
+                             show_register=True)
 
 
 @app.route('/faculty_dashboard')
@@ -470,6 +563,8 @@ def video_feed():
                 
                 # Frame counter for voting system
                 frame_count = 0
+                last_advanced_results = []
+                last_basic_results = []
                 
                 while True:
                     frame = cam.read_frame()
@@ -484,34 +579,37 @@ def video_feed():
                     if session_obj.is_active:
                         try:
                             if use_advanced:
-                                # Advanced recognition with voting
-                                results = recognizer.recognize_frame(frame)
-                                recognizer.add_to_voting_buffer(results)
-                                
-                                # Check for confirmed recognition via voting
-                                voting_result = recognizer.get_voting_result()
-                                if voting_result and voting_result['status'] == 'confirmed':
-                                    # Mark attendance for confirmed recognition
-                                    name = voting_result['name']
-                                    confidence = voting_result['confidence']
+                                # Advanced recognition: Process every 5th frame to reduce lag
+                                if frame_count % 5 == 0:
+                                    results = recognizer.recognize_frame(frame)
+                                    recognizer.add_to_voting_buffer(results)
+                                    last_advanced_results = results
                                     
-                                    # Use name as roll_no (can be customized)
-                                    mark_present(name, confidence * 100)
-                                    print(f"Attendance marked: {name} (conf: {confidence:.2f})")
-                                    
-                                    # Clear buffer after successful recognition
-                                    recognizer.clear_voting_buffer()
+                                    # Check for confirmed recognition via voting
+                                    voting_result = recognizer.get_voting_result()
+                                    if voting_result and voting_result['status'] == 'confirmed':
+                                        # Mark attendance for confirmed recognition
+                                        name = voting_result['name']
+                                        confidence = voting_result['confidence']
+                                        
+                                        # Use name as roll_no (can be customized)
+                                        mark_present(name, confidence * 100)
+                                        print(f"Attendance marked: {name} (conf: {confidence:.2f})")
+                                        
+                                        # Clear buffer after successful recognition
+                                        recognizer.clear_voting_buffer()
                                 
-                                # Draw boxes on frame
-                                display_frame = draw_recognition_boxes(display_frame, results)
+                                # Draw boxes on frame using cached results
+                                display_frame = draw_recognition_boxes(display_frame, last_advanced_results)
                             else:
-                                # Fallback to basic recognition
-                                if frame_count % 3 == 0:
+                                # Fallback to basic recognition: Process every 5th frame
+                                if frame_count % 5 == 0:
                                     recognized = face_manager.recognize_faces(frame)
                                     for face in recognized:
                                         if face.get('roll_no') and face['roll_no'] != 'UNKNOWN':
                                             mark_present(face['roll_no'], face['confidence'])
-                                    display_frame = draw_face_boxes(display_frame, recognized)
+                                    last_basic_results = recognized
+                                display_frame = draw_face_boxes(display_frame, last_basic_results)
                                     
                         except Exception as e:
                             print(f"Recognition error: {e}")
@@ -527,8 +625,10 @@ def video_feed():
                     except Exception as e:
                         print(f"Frame encoding error: {e}")
                     
-                    # ~20 fps for advanced (heavier processing)
-                    time.sleep(0.05 if use_advanced else 0.033)
+                    # Small delay only when not actively predicting on this frame,
+                    # OpenCV cap.read() already blocks to match camera framerate
+                    if frame_count % 5 != 0:
+                        time.sleep(0.01)
                     
             finally:
                 cam.stop()

@@ -100,14 +100,16 @@ def sync_enrolled_students():
     synced = []
     for i, name in enumerate(enrolled_names, start=1):
         # Use name as roll_no (or generate one)
-        roll_no = name  # Using name as roll_no for simplicity
+        roll_no = name.upper()  # Using uppercase name as roll_no for simplicity
+        student_name = name
         section = 'A'  # Default section
         image_path = f'dataset/{name}'
         
         try:
+            # Try to insert new student
             cursor.execute(
                 'INSERT INTO students (name, roll_no, section, image_path) VALUES (?, ?, ?, ?)',
-                (name, roll_no, section, image_path)
+                (student_name, roll_no, section, image_path)
             )
             synced.append({'name': name, 'roll_no': roll_no, 'status': 'added'})
         except sqlite3.IntegrityError:
@@ -132,11 +134,12 @@ def clear_sample_students():
     embeddings_path = Path(os.path.dirname(os.path.abspath(__file__))) / 'dataset' / 'embeddings'
     config_path = embeddings_path / 'config.json'
     
-    enrolled_names = []
+    enrolled_names_upper = []
     if config_path.exists():
         with open(config_path, 'r') as f:
             config = json.load(f)
         enrolled_names = config.get('students', [])
+        enrolled_names_upper = [n.upper() for n in enrolled_names]
     
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -148,7 +151,7 @@ def clear_sample_students():
     for student in all_students:
         roll_no = student['roll_no']
         # Remove if not in enrolled list
-        if roll_no not in enrolled_names:
+        if roll_no.upper() not in enrolled_names_upper:
             cursor.execute('DELETE FROM students WHERE roll_no = ?', (roll_no,))
             removed += 1
     
@@ -186,6 +189,9 @@ def seed_sample_data():
     faculty_data = [
         ('Prof. Sharma', 'sharma@college.edu', 'password123', 'Computer Science'),
         ('Prof. Gupta', 'gupta@college.edu', 'password123', 'Computer Science'),
+        ('Prof. Reddy', 'reddy@college.edu', 'password123', 'Electronics'),
+        ('Prof. Iyer', 'iyer@college.edu', 'password123', 'Mathematics'),
+        ('Prof. Patel', 'patel@college.edu', 'password123', 'Mechanical'),
         ('Admin', 'admin@college.edu', 'admin123', 'Administration'),
     ]
     
@@ -265,6 +271,23 @@ def verify_faculty_password(email, password):
     if faculty and check_password_hash(faculty['password_hash'], password):
         return faculty
     return None
+
+
+def add_faculty(name, email, password, department='Computer Science'):
+    """Add a new faculty member to the database."""
+    conn = get_db_connection()
+    try:
+        password_hash = generate_password_hash(password)
+        conn.execute(
+            'INSERT INTO faculty (name, email, password_hash, department) VALUES (?, ?, ?, ?)',
+            (name, email, password_hash, department)
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except sqlite3.IntegrityError:
+        conn.close()
+        return False
 
 
 # ========================================
