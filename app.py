@@ -3,7 +3,7 @@ AI-Powered Face Recognition Attendance System
 Flask Backend Application
 
 Main entry point that integrates all modules:
-- Database models (SQLite)
+- Database models (MySQL)
 - Authentication routes
 - Attendance control routes
 - Face recognition module
