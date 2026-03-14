@@ -378,11 +378,22 @@ def api_attendance_data():
     
     if not summary:
         # No active session - show students in the current section as absent
+        absent_list = []
+        for s in all_students:
+            img_path = s.get('image_path', '')
+            # Clean path to get folder name (handle both / and \)
+            folder_name = img_path.replace('dataset/', '').replace('dataset\\', '')
+            absent_list.append({
+                'id': s['roll_no'],
+                'name': s['name'],
+                'image_url': f"/api/student_image/{folder_name}" if folder_name else None
+            })
+            
         return jsonify({
             'success': True,
             'session_active': False,
             'present': [],
-            'absent': [{'id': s['roll_no'], 'name': s['name']} for s in all_students],
+            'absent': absent_list,
             'total': len(all_students),
             'present_count': 0,
             'absent_count': len(all_students)
@@ -393,22 +404,26 @@ def api_attendance_data():
     present_roll_nos = set()
     for s in summary.get('present', []):
         present_roll_nos.add(s['roll_no'])
+        img_path = s.get('image_path', '')
+        folder_name = img_path.replace('dataset/', '').replace('dataset\\', '')
         present.append({
             'id': s['roll_no'],
             'name': s['name'],
             'time': s.get('time', '--:--'),
             'confidence': s.get('confidence', 0),
-            'image_url': f"/api/student_image/{s.get('image_path', '').replace('dataset/', '')}" if s.get('image_path') else None
+            'image_url': f"/api/student_image/{folder_name}" if folder_name else None
         })
     
     # Calculate absent (all students in THIS section not in present)
     absent = []
     for s in all_students:
         if s['roll_no'] not in present_roll_nos:
+            img_path = s.get('image_path', '')
+            folder_name = img_path.replace('dataset/', '').replace('dataset\\', '')
             absent.append({
                 'id': s['roll_no'],
                 'name': s['name'],
-                'image_url': f"/api/student_image/{s.get('image_path', '').replace('dataset/', '')}" if s.get('image_path') else None
+                'image_url': f"/api/student_image/{folder_name}" if folder_name else None
             })
     
     return jsonify({

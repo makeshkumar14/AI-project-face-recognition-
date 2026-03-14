@@ -108,6 +108,18 @@ def sync_enrolled_students():
     if isinstance(config, list):
         config = config[-1] if config else {}
     
+    # Mapping of names to specific roll numbers as per user request
+    # Using lowercase keys for case-insensitive matching
+    ROLL_NO_MAP = {
+        'makeshkumar': '693',
+        'kavin': '647',
+        'rohanbala': '648',
+        'ratchagan': '655',
+        'parkavan': '685',
+        'boopathi': '686',
+        'hasvandh': '696'
+    }
+    
     enrolled_names = config.get('students', [])
     
     conn = get_db_connection()
@@ -115,26 +127,33 @@ def sync_enrolled_students():
     
     synced = []
     for i, name in enumerate(enrolled_names, start=1):
-        # Use name as roll_no (or generate one)
-        roll_no = name.upper()  # Using uppercase name as roll_no for simplicity
+        # Use specific roll number from mapping, or fall back to uppercase name
+        roll_no = ROLL_NO_MAP.get(name.lower(), name.upper())
         student_name = name
         section = 'A'  # Default section
         image_path = f'dataset/{name}'
         
         try:
-            # Try to insert new student
-            cursor.execute(
-                'INSERT INTO students (name, roll_no, section, image_path) VALUES (%s, %s, %s, %s)',
-                (student_name, roll_no, section, image_path)
-            )
-            synced.append({'name': name, 'roll_no': roll_no, 'status': 'added'})
-        except mysql.connector.IntegrityError:
-            # Student already exists, update if needed
-            cursor.execute(
-                'UPDATE students SET name = %s, image_path = %s WHERE roll_no = %s',
-                (name, image_path, roll_no)
-            )
-            synced.append({'name': name, 'roll_no': roll_no, 'status': 'updated'})
+            # Check if student already exists by name (case-insensitive in MySQL usually)
+            cursor.execute('SELECT id, roll_no FROM students WHERE name = %s', (student_name,))
+            existing = cursor.fetchone()
+            
+            if existing:
+                # Update existing student with new roll_no and image_path
+                cursor.execute(
+                    'UPDATE students SET roll_no = %s, image_path = %s WHERE id = %s',
+                    (roll_no, image_path, existing[0])
+                )
+                synced.append({'name': name, 'roll_no': roll_no, 'status': 'updated'})
+            else:
+                # Insert new student
+                cursor.execute(
+                    'INSERT INTO students (name, roll_no, section, image_path) VALUES (%s, %s, %s, %s)',
+                    (student_name, roll_no, section, image_path)
+                )
+                synced.append({'name': name, 'roll_no': roll_no, 'status': 'added'})
+        except mysql.connector.IntegrityError as e:
+            synced.append({'name': name, 'roll_no': roll_no, 'status': f'error: {str(e)}'})
     
     conn.commit()
     cursor.close()
@@ -280,6 +299,15 @@ def get_student_by_id(student_id):
     cursor.execute(
         'SELECT * FROM students WHERE id = %s',
         (student_id,)
+    )
+    student = cursor.fetchone()
+def get_student_by_name(name):
+    """Get a student by name."""
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        'SELECT * FROM students WHERE name = %s',
+        (name,)
     )
     student = cursor.fetchone()
     cursor.close()

@@ -8,6 +8,7 @@ from datetime import datetime
 from models import (
     get_all_students, 
     get_student_by_roll_no,
+    get_student_by_name,
     mark_attendance, 
     check_attendance_exists,
     update_attendance_status,
@@ -135,14 +136,21 @@ class AttendanceSession:
             if not self.subject:
                 return False, "No session initialized"
             
-            # Check if already in marked_students set (already marked PRESENT)
-            if roll_no in self.marked_students:
-                return False, f"Student {roll_no} already marked PRESENT"
-            
-            # Get student from database
+            # Get student from database - try roll_no first, then name
             student = get_student_by_roll_no(roll_no)
             if not student:
+                # If roll_no search fails, try searching by name
+                student = get_student_by_name(roll_no)
+                
+            if not student:
                 return False, f"Student {roll_no} not found"
+                
+            # Use the canonical roll number from the database record
+            db_roll_no = student['roll_no']
+            
+            # Check if already in marked_students set (already marked PRESENT)
+            if db_roll_no in self.marked_students:
+                return False, f"Student {student['name']} already marked PRESENT"
             
             current_time = datetime.now().strftime('%H:%M:%S')
             
@@ -179,10 +187,10 @@ class AttendanceSession:
                 )
             
             if success:
-                self.marked_students.add(roll_no)
-                return True, f"Marked {student['name']} ({roll_no}) as PRESENT"
+                self.marked_students.add(db_roll_no)
+                return True, f"Marked {student['name']} ({db_roll_no}) as PRESENT"
             else:
-                return False, f"Failed to mark {roll_no} as present"
+                return False, f"Failed to mark {student['name']} as present"
     
     def mark_student_absent(self, roll_no):
         """
@@ -191,10 +199,15 @@ class AttendanceSession:
         with self.lock:
             if not self.subject:
                 return False, "No session initialized"
-            
+            # Get student from database - try roll_no first, then name
             student = get_student_by_roll_no(roll_no)
             if not student:
+                student = get_student_by_name(roll_no)
+                
+            if not student:
                 return False, f"Student {roll_no} not found"
+            
+            db_roll_no = student['roll_no']
             
             # Check if already marked
             existing = check_attendance_exists(
@@ -232,9 +245,9 @@ class AttendanceSession:
                 )
             
             # Remove from marked set if present
-            self.marked_students.discard(roll_no)
+            self.marked_students.discard(db_roll_no)
             
-            return True, f"Marked {student['name']} ({roll_no}) as ABSENT"
+            return True, f"Marked {student['name']} ({db_roll_no}) as ABSENT"
     
     def reset(self):
         """Reset the current session attendance records."""
