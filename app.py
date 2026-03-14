@@ -9,10 +9,11 @@ Main entry point that integrates all modules:
 - Face recognition module
 """
 
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session
-from flask_cors import CORS
 from datetime import datetime
 import os
+import glob
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, send_from_directory
+from flask_cors import CORS
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -370,10 +371,13 @@ def api_attendance_data():
     from models import get_all_students
     
     summary = get_session_summary()
-    all_students = get_all_students()
+    
+    # Get all students, filtered by the current session's section if available
+    current_section = summary['session'].get('section') if summary else None
+    all_students = get_all_students(section=current_section)
     
     if not summary:
-        # No active session - show all students as absent (not started)
+        # No active session - show students in the current section as absent
         return jsonify({
             'success': True,
             'session_active': False,
@@ -388,21 +392,23 @@ def api_attendance_data():
     present = []
     present_roll_nos = set()
     for s in summary.get('present', []):
+        present_roll_nos.add(s['roll_no'])
         present.append({
             'id': s['roll_no'],
             'name': s['name'],
             'time': s.get('time', '--:--'),
-            'confidence': s.get('confidence', 0)
+            'confidence': s.get('confidence', 0),
+            'image_url': f"/api/student_image/{s.get('image_path', '').replace('dataset/', '')}" if s.get('image_path') else None
         })
-        present_roll_nos.add(s['roll_no'])
     
-    # Calculate absent (all students not in present)
+    # Calculate absent (all students in THIS section not in present)
     absent = []
     for s in all_students:
         if s['roll_no'] not in present_roll_nos:
             absent.append({
                 'id': s['roll_no'],
-                'name': s['name']
+                'name': s['name'],
+                'image_url': f"/api/student_image/{s.get('image_path', '').replace('dataset/', '')}" if s.get('image_path') else None
             })
     
     return jsonify({
@@ -415,6 +421,42 @@ def api_attendance_data():
         'present_count': len(present),
         'absent_count': len(absent)
     })
+
+
+@app.route('/api/student_image/<path:student_dir>')
+def get_student_image(student_dir):
+    """Serve the first valid image found in the student's dataset directory."""
+    base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dataset')
+    full_path = os.path.join(base_dir, student_dir)
+    
+    # Try case-insensitive folder match if path doesn't exist
+    if not os.path.isdir(full_path):
+        target = student_dir.lower()
+        if os.path.exists(base_dir):
+            for d in os.listdir(base_dir):
+                if d.lower() == target:
+                    full_path = os.path.join(base_dir, d)
+                    break
+    
+    if os.path.isdir(full_path):
+        # Look for image files with various extensions
+        patterns = ["*.[jJ][pP][gG]", "*.[jJ][pP][eE][gG]", "*.[pP][nN][gG]", "*.[wW][eE][bB][pP]"]
+        image_files = []
+        for p in patterns:
+            image_files.extend(glob.glob(os.path.join(full_path, p)))
+        
+        # Sort and return the first non-empty image
+        image_files.sort()
+        for img_path in image_files:
+            try:
+                if os.path.getsize(img_path) > 0:
+                    filename = os.path.basename(img_path)
+                    return send_from_directory(os.path.dirname(img_path), filename)
+            except Exception as e:
+                continue
+            
+    # Return 404 if no image found
+    return "Image not found", 404
 
 
 @app.route('/api/reset_session', methods=['POST'])

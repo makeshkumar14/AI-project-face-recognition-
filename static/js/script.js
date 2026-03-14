@@ -552,10 +552,14 @@ function renderPresentTable(data) {
         ? `<span class="confidence-badge">${student.confidence}%</span>`
         : '<span class="confidence-badge low">--</span>';
 
+    const avatarContent = student.image_url 
+      ? `<img src="${student.image_url}" alt="${student.name}" onerror="this.style.display='none'">` 
+      : initials;
+
     row.innerHTML = `
             <td>
                 <div class="student-info">
-                    <div class="student-avatar">${initials}</div>
+                    <div class="student-avatar">${avatarContent}</div>
                     <div>
                         <div class="student-name">${student.name}</div>
                     </div>
@@ -609,10 +613,14 @@ function renderAbsentTable(data) {
       .map((n) => n[0])
       .join("");
 
+    const avatarContent = student.image_url 
+      ? `<img src="${student.image_url}" alt="${student.name}" onerror="this.style.display='none'">` 
+      : initials;
+
     row.innerHTML = `
             <td>
                 <div class="student-info">
-                    <div class="student-avatar" style="background: linear-gradient(135deg, #fc8181, #f56565);">${initials}</div>
+                    <div class="student-avatar" style="background: linear-gradient(135deg, #fc8181, #f56565);">${avatarContent}</div>
                     <div>
                         <div class="student-name">${student.name}</div>
                     </div>
@@ -641,12 +649,16 @@ function markStudentPresent(studentId, studentName) {
   })
     .then((response) => response.json())
     .then((data) => {
-      // Reload attendance data from backend
-      loadAttendanceData();
+      if (data.success) {
+        // Reload attendance data from backend
+        loadAttendanceData();
 
-      // Log and notify
-      addLogEntry(`${studentName} manually marked present`, "success");
-      showNotification(`${studentName} marked present!`, "success");
+        // Log and notify
+        addLogEntry(`${studentName} manually marked present`, "success");
+        showNotification(`${studentName} marked present!`, "success");
+      } else {
+        showNotification(data.message || "Failed to mark present", "error");
+      }
     })
     .catch((error) => {
       console.error("Error marking present:", error);
@@ -665,12 +677,16 @@ function markStudentAbsent(studentId, studentName) {
   })
     .then((response) => response.json())
     .then((data) => {
-      // Reload attendance data from backend
-      loadAttendanceData();
+      if (data.success) {
+        // Reload attendance data from backend
+        loadAttendanceData();
 
-      // Log and notify
-      addLogEntry(`${studentName} marked absent`, "warning");
-      showNotification(`${studentName} marked absent!`, "warning");
+        // Log and notify
+        addLogEntry(`${studentName} marked absent`, "warning");
+        showNotification(`${studentName} marked absent!`, "warning");
+      } else {
+        showNotification(data.message || "Failed to mark absent", "error");
+      }
     })
     .catch((error) => {
       console.error("Error marking absent:", error);

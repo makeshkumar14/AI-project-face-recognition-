@@ -56,7 +56,7 @@ class AttendanceSession:
             self.marked_students = set()
             self.is_active = True
             
-            # Load any existing attendance for this session
+            # Load any existing attendance for this session (only PRESENT students)
             existing = get_attendance(
                 subject=self.subject,
                 section=self.section,
@@ -64,7 +64,8 @@ class AttendanceSession:
                 date=self.date
             )
             for record in existing:
-                self.marked_students.add(record['roll_no'])
+                if record.get('status') == 'PRESENT':
+                    self.marked_students.add(record['roll_no'])
             
             return True, f"Session started for {subject} - Section {section}, Period {period}"
     
@@ -98,16 +99,26 @@ class AttendanceSession:
         
         for student in all_students:
             if student['roll_no'] not in self.marked_students:
-                mark_attendance(
-                    student_id=student['id'],
-                    subject=self.subject,
-                    section=self.section,
-                    period=self.period,
-                    date=self.date,
-                    time=current_time,
-                    status='ABSENT',
-                    confidence=0.0
+                # Use update logic to handle cases where they were previously marked PRESENT manually
+                # (though marked_students check should prevent that)
+                existing = check_attendance_exists(
+                    student['id'], 
+                    self.subject, 
+                    self.section, 
+                    self.period, 
+                    self.date
                 )
+                if not existing:
+                    mark_attendance(
+                        student_id=student['id'],
+                        subject=self.subject,
+                        section=self.section,
+                        period=self.period,
+                        date=self.date,
+                        time=current_time,
+                        status='ABSENT',
+                        confidence=0.0
+                    )
     
     def mark_student_present(self, roll_no, confidence=0.0):
         """
@@ -121,44 +132,65 @@ class AttendanceSession:
             (success: bool, message: str)
         """
         with self.lock:
-            if not self.is_active:
-                return False, "No active session"
+            if not self.subject:
+                return False, "No session initialized"
             
-            # Check if already marked
+            # Check if already in marked_students set (already marked PRESENT)
             if roll_no in self.marked_students:
-                return False, f"Student {roll_no} already marked"
+                return False, f"Student {roll_no} already marked PRESENT"
             
             # Get student from database
             student = get_student_by_roll_no(roll_no)
             if not student:
                 return False, f"Student {roll_no} not found"
             
-            # Mark attendance
             current_time = datetime.now().strftime('%H:%M:%S')
-            success = mark_attendance(
-                student_id=student['id'],
-                subject=self.subject,
-                section=self.section,
-                period=self.period,
-                date=self.date,
-                time=current_time,
-                status='PRESENT',
-                confidence=confidence
+            
+            # Check if an ABSENT record already exists to UPDATE instead of INSERT
+            existing = check_attendance_exists(
+                student['id'], 
+                self.subject, 
+                self.section, 
+                self.period, 
+                self.date
             )
+            
+            if existing:
+                update_attendance_status(
+                    student['id'],
+                    self.subject,
+                    self.section,
+                    self.period,
+                    self.date,
+                    'PRESENT',
+                    current_time
+                )
+                success = True
+            else:
+                success = mark_attendance(
+                    student_id=student['id'],
+                    subject=self.subject,
+                    section=self.section,
+                    period=self.period,
+                    date=self.date,
+                    time=current_time,
+                    status='PRESENT',
+                    confidence=confidence
+                )
             
             if success:
                 self.marked_students.add(roll_no)
                 return True, f"Marked {student['name']} ({roll_no}) as PRESENT"
             else:
-                return False, f"Failed to mark {roll_no} - may already exist"
+                return False, f"Failed to mark {roll_no} as present"
     
     def mark_student_absent(self, roll_no):
         """
         Explicitly mark a student as absent (manual override).
         """
         with self.lock:
-            if not self.is_active:
-                return False, "No active session"
+            if not self.subject:
+                return False, "No session initialized"
             
             student = get_student_by_roll_no(roll_no)
             if not student:
@@ -259,13 +291,15 @@ class AttendanceSession:
                     'name': student['name'],
                     'roll_no': roll,
                     'time': record['time'],
-                    'confidence': record.get('confidence', 0)
+                    'confidence': record.get('confidence', 0),
+                    'image_path': student.get('image_path')
                 })
             else:
                 absent.append({
                     'id': student['id'],
                     'name': student['name'],
-                    'roll_no': roll
+                    'roll_no': roll,
+                    'image_path': student.get('image_path')
                 })
         
         total = len(all_students)
