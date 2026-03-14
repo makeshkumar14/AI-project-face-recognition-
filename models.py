@@ -456,6 +456,21 @@ def check_attendance_exists(student_id, subject, section, period, date):
     return record
 
 
+def delete_attendance(subject, section, period, date):
+    """Delete all attendance records for a specific session."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        '''DELETE FROM attendance 
+           WHERE subject = %s AND section = %s AND period = %s AND date = %s''',
+        (subject, section, period, date)
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return True
+
+
 # Initialize database when module is imported
 if __name__ == '__main__':
     init_db()

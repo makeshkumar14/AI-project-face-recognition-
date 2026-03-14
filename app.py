@@ -31,6 +31,25 @@ with app.app_context():
     init_db()
     seed_sample_data()
 
+# Pre-load face recognition models to prevent delay when opening camera
+import threading
+def preload_models():
+    print("Pre-loading Face Recognition models in background...")
+    try:
+        from advanced_face_recognition import get_recognizer
+        get_recognizer()
+        print("Advanced Face Recognition models pre-loaded successfully!")
+    except Exception as e:
+        print(f"Could not pre-load advanced models: {e}")
+        try:
+            from face_recognition_module import face_manager
+            face_manager.load_known_faces()
+            print("Basic Face Recognition models pre-loaded!")
+        except:
+            pass
+
+threading.Thread(target=preload_models, daemon=True).start()
+
 # ========================================
 # Register Blueprints
 # ========================================
@@ -353,7 +372,7 @@ def api_attendance_data():
     summary = get_session_summary()
     all_students = get_all_students()
     
-    if not summary or not summary['session'].get('is_active', False):
+    if not summary:
         # No active session - show all students as absent (not started)
         return jsonify({
             'success': True,
@@ -395,6 +414,17 @@ def api_attendance_data():
         'total': len(all_students),
         'present_count': len(present),
         'absent_count': len(absent)
+    })
+
+
+@app.route('/api/reset_session', methods=['POST'])
+def api_reset_session():
+    """Reset the current attendance session."""
+    from attendance_logic import reset_session
+    success, message = reset_session()
+    return jsonify({
+        'success': success,
+        'message': message
     })
 
 

@@ -204,6 +204,17 @@ class AttendanceSession:
             
             return True, f"Marked {student['name']} ({roll_no}) as ABSENT"
     
+    def reset(self):
+        """Reset the current session attendance records."""
+        with self.lock:
+            if not self.subject or not self.section:
+                return False, "No session initialized to reset"
+            
+            from models import delete_attendance
+            delete_attendance(self.subject, self.section, self.period, self.date)
+            self.marked_students = set()
+            return True, "Session attendance cleared successfully"
+    
     def get_status(self):
         """Get current session status."""
         return {
@@ -312,6 +323,11 @@ def mark_absent(roll_no):
 def get_session_summary():
     """Convenience function to get session summary."""
     return current_session.get_session_summary()
+
+
+def reset_session():
+    """Convenience function to reset current session."""
+    return current_session.reset()
 
 
 # Testing

@@ -856,20 +856,35 @@ def draw_recognition_boxes(frame: np.ndarray, results: List[Dict]) -> np.ndarray
         else:
             color = (0, 0, 255)  # Red
         
-        # Enhanced Label drawing (Optimized for multi-detection)
+        # Corners/Brackets drawing (Animated look)
+        length = 20
+        # Top-left
+        cv2.line(frame, (x1, y1), (x1 + length, y1), color, 2)
+        cv2.line(frame, (x1, y1), (x1, y1 + length), color, 2)
+        # Top-right
+        cv2.line(frame, (x2, y1), (x2 - length, y1), color, 2)
+        cv2.line(frame, (x2, y1), (x2, y1 + length), color, 2)
+        # Bottom-left
+        cv2.line(frame, (x1, y2), (x1 + length, y2), color, 2)
+        cv2.line(frame, (x1, y2), (x1, y2 - length), color, 2)
+        # Bottom-right
+        cv2.line(frame, (x2, y2), (x2 - length, y2), color, 2)
+        cv2.line(frame, (x2, y2), (x2, y2 - length), color, 2)
+
+        # Enhanced Label drawing
         label = f"{name} ({confidence*100:.1f}%)"
         font = cv2.FONT_HERSHEY_DUPLEX
-        font_scale = 0.55 # Reduced from 0.8 for multi-detection
-        thickness = 1 # Reduced from 2 for cleaner look
+        font_scale = 0.7  # Increased font scale
+        thickness = 2
         
-        # Get label size for background rectangle
+        # Get label size
         (label_w, label_h), baseline = cv2.getTextSize(label, font, font_scale, thickness)
         
-        # Draw label background (more compact)
-        cv2.rectangle(frame, (x1, y1 - label_h - 6), (x1 + label_w + 6, y1), color, -1)
+        # Draw label background
+        cv2.rectangle(frame, (x1, y1 - label_h - 4), (x1 + label_w + 4, y1), color, -1)
         
         # Draw label text
-        cv2.putText(frame, label, (x1 + 3, y1 - 4), font, font_scale, (255, 255, 255), thickness)
+        cv2.putText(frame, label, (x1 + 2, y1 - 3), font, font_scale, (0, 0, 0), thickness)
     
     return frame
 

@@ -349,35 +349,36 @@ function resetSession() {
     return;
   }
 
-  facesDetectedCount = 0;
-  studentsMarkedCount = 0;
+  // Call backend API to reset session
+  fetch("/api/reset_session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success) {
+        facesDetectedCount = 0;
+        studentsMarkedCount = 0;
 
-  updateFacesDetected(0);
-  updateStudentsMarked(0);
+        updateFacesDetected(0);
+        updateStudentsMarked(0);
 
-  // Clear attendance table
-  const tableBody = document.getElementById("attendanceData");
-  if (tableBody) {
-    tableBody.innerHTML = "";
-  }
+        // Reload data to refresh lists
+        loadAttendanceData();
 
-  // Update badge
-  const badge = document.getElementById("attendanceCountBadge");
-  if (badge) {
-    badge.textContent = "0 marked";
-  }
+        // Clear logs
+        clearLogs();
 
-  // Show empty state
-  const emptyState = document.getElementById("emptyState");
-  if (emptyState) {
-    emptyState.classList.add("visible");
-  }
-
-  // Clear logs
-  clearLogs();
-
-  addLogEntry("Session reset successfully", "warning");
-  showNotification("Session has been reset", "warning");
+        addLogEntry("Session reset successfully", "warning");
+        showNotification("Session has been reset", "warning");
+      } else {
+        throw new Error(data.message || "Failed to reset session");
+      }
+    })
+    .catch((error) => {
+      console.error("Error resetting session:", error);
+      showNotification("Error: " + error.message, "error");
+    });
 }
 
 /* ========================================
@@ -502,6 +503,7 @@ function loadAttendanceData() {
 
         studentsMarkedCount = data.present_count;
         updateStudentsMarked(studentsMarkedCount);
+        updateFacesDetected(studentsMarkedCount);
       }
     })
     .catch((error) => {

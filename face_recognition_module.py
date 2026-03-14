@@ -295,14 +295,14 @@ class WebcamCapture:
         """Start the webcam capture."""
         if self.cap is None or not self.cap.isOpened():
             # Try multiple camera indices for compatibility across different laptops
-            camera_indices = [self.camera_index, 0, 1, 2]
+            camera_indices = [self.camera_index, 0]
             # Remove duplicates while preserving order
             camera_indices = list(dict.fromkeys(camera_indices))
             
-            # Try DirectShow backend first (more reliable on Windows)
+            # Try DirectShow backend first, then Default. 
+            # We purposely skip MSMF because it is notorious for hanging for 30-40 seconds on Windows.
             backends = [
                 (cv2.CAP_DSHOW, "DirectShow"),
-                (cv2.CAP_MSMF, "MSMF"),
                 (cv2.CAP_ANY, "Default")
             ]
             
@@ -421,7 +421,9 @@ def draw_face_boxes(frame, recognized_faces):
         
         # Draw label background
         label = f"{name} ({confidence}%)"
-        label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
+        font_scale = 0.8
+        thickness = 2
+        label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0]
         cv2.rectangle(
             frame, 
             (left, bottom), 
@@ -436,9 +438,9 @@ def draw_face_boxes(frame, recognized_faces):
             label, 
             (left + 5, bottom + label_size[1] + 5),
             cv2.FONT_HERSHEY_SIMPLEX, 
-            0.5, 
+            font_scale, 
             (0, 0, 0), 
-            1
+            thickness
         )
     
     return frame
