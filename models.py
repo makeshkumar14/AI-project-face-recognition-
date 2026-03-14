@@ -59,12 +59,12 @@ def init_db():
         )
     ''')
     
-    # Create attendance table
-    # Unique constraint prevents duplicate attendance for same student/subject/section/period/date
+    # Create attendance table with faculty_id for per-faculty history
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS attendance (
             id INT AUTO_INCREMENT PRIMARY KEY,
             student_id INT NOT NULL,
+            faculty_id INT,
             subject VARCHAR(255) NOT NULL,
             section VARCHAR(50) NOT NULL,
             period VARCHAR(50) NOT NULL,
@@ -74,9 +74,17 @@ def init_db():
             confidence FLOAT DEFAULT 0.0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (student_id) REFERENCES students(id),
+            FOREIGN KEY (faculty_id) REFERENCES faculty(id) ON DELETE SET NULL,
             UNIQUE KEY unique_attendance (student_id, subject, section, period, date)
         )
     ''')
+
+    # Add faculty_id column to existing attendance table if missing
+    try:
+        cursor.execute("ALTER TABLE attendance ADD COLUMN faculty_id INT AFTER student_id")
+        cursor.execute("ALTER TABLE attendance ADD CONSTRAINT fk_att_fac FOREIGN KEY (faculty_id) REFERENCES faculty(id) ON DELETE SET NULL")
+    except Exception:
+        pass  # Column already exists
     
     conn.commit()
     cursor.close()
@@ -224,37 +232,9 @@ def add_student(name, roll_no, section='A', image_path=None):
 
 
 def seed_sample_data():
-    """Seed database with enrolled students from embeddings (not sample data)."""
-    # First sync enrolled students
-    synced = sync_enrolled_students()
-    
-    # Seed faculty data
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    faculty_data = [
-        ('Prof. Sharma', 'sharma@college.edu', 'password123', 'Computer Science'),
-        ('Prof. Gupta', 'gupta@college.edu', 'password123', 'Computer Science'),
-        ('Prof. Reddy', 'reddy@college.edu', 'password123', 'Electronics'),
-        ('Prof. Iyer', 'iyer@college.edu', 'password123', 'Mathematics'),
-        ('Prof. Patel', 'patel@college.edu', 'password123', 'Mechanical'),
-        ('Admin', 'admin@college.edu', 'admin123', 'Administration'),
-    ]
-    
-    for name, email, password, department in faculty_data:
-        try:
-            password_hash = generate_password_hash(password)
-            cursor.execute(
-                'INSERT INTO faculty (name, email, password_hash, department) VALUES (%s, %s, %s, %s)',
-                (name, email, password_hash, department)
-            )
-        except mysql.connector.IntegrityError:
-            pass
-    
-    conn.commit()
-    cursor.close()
-    conn.close()
-    print("Database seeded with enrolled students and faculty!")
+    """Seed database with enrolled students from embeddings."""
+    sync_enrolled_students()
+    print("Database seeded with enrolled students!")
 
 
 # ========================================
@@ -365,7 +345,7 @@ def add_faculty(name, email, password, department='Computer Science'):
 # Attendance Database Operations
 # ========================================
 
-def mark_attendance(student_id, subject, section, period, date, time, status, confidence=0.0):
+def mark_attendance(student_id, subject, section, period, date, time, status, confidence=0.0, faculty_id=None):
     """
     Mark attendance for a student.
     Returns True if successful, False if duplicate (already marked).
@@ -375,16 +355,15 @@ def mark_attendance(student_id, subject, section, period, date, time, status, co
     try:
         cursor.execute(
             '''INSERT INTO attendance 
-               (student_id, subject, section, period, date, time, status, confidence)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''',
-            (student_id, subject, section, period, date, time, status, confidence)
+               (student_id, faculty_id, subject, section, period, date, time, status, confidence)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)''',
+            (student_id, faculty_id, subject, section, period, date, time, status, confidence)
         )
         conn.commit()
         cursor.close()
         conn.close()
         return True
     except mysql.connector.IntegrityError:
-        # Duplicate entry - student already marked for this session
         cursor.close()
         conn.close()
         return False
@@ -497,6 +476,51 @@ def delete_attendance(subject, section, period, date):
     cursor.close()
     conn.close()
     return True
+
+
+# ========================================
+# Faculty Dashboard Query Functions
+# ========================================
+
+def get_faculty_attendance_history(faculty_id, limit=20):
+    """Get past attendance sessions for a specific faculty member."""
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute('''
+        SELECT 
+            a.subject, a.section, a.period, a.date,
+            COUNT(*) AS total,
+            SUM(CASE WHEN a.status = 'PRESENT' THEN 1 ELSE 0 END) AS present_count,
+            SUM(CASE WHEN a.status = 'ABSENT' THEN 1 ELSE 0 END) AS absent_count,
+            MIN(a.time) AS start_time
+        FROM attendance a
+        WHERE a.faculty_id = %s
+        GROUP BY a.subject, a.section, a.period, a.date
+        ORDER BY a.date DESC, a.period ASC
+        LIMIT %s
+    ''', (faculty_id, limit))
+    records = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return records
+
+
+def get_faculty_stats(faculty_id):
+    """Get summary stats for a faculty member's attendance history."""
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute('''
+        SELECT
+            COUNT(DISTINCT CONCAT(subject, section, period, date)) AS total_sessions,
+            SUM(CASE WHEN status = 'PRESENT' THEN 1 ELSE 0 END) AS total_present,
+            COUNT(DISTINCT subject) AS unique_subjects
+        FROM attendance
+        WHERE faculty_id = %s
+    ''', (faculty_id,))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return row or {'total_sessions': 0, 'total_present': 0, 'unique_subjects': 0}
 
 
 # Initialize database when module is imported

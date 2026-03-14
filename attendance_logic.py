@@ -31,33 +31,36 @@ class AttendanceSession:
         self.section = None
         self.period = None
         self.date = None
+        self.faculty_id = None
         self.start_time = None
         self.marked_students = set()  # Roll numbers already marked
         self.lock = threading.Lock()
     
-    def start(self, subject, section, period, date=None):
+    def start(self, subject, section, period, date=None, faculty_id=None):
         """
         Start a new attendance session.
-        
+
         Args:
             subject: Subject name (e.g., "Artificial Intelligence")
             section: Class section (e.g., "A")
             period: Period number (e.g., "1")
             date: Optional date string (defaults to today)
+            faculty_id: ID of the faculty taking attendance
         """
         with self.lock:
             if self.is_active:
                 return False, "Session already running"
-            
+
             self.subject = subject
             self.section = section
             self.period = str(period)
             self.date = date or datetime.now().strftime('%Y-%m-%d')
+            self.faculty_id = faculty_id
             self.start_time = datetime.now()
             self.marked_students = set()
             self.is_active = True
-            
-            # Load any existing attendance for this session (only PRESENT students)
+
+            # Load any existing PRESENT attendance for this session
             existing = get_attendance(
                 subject=self.subject,
                 section=self.section,
@@ -67,7 +70,7 @@ class AttendanceSession:
             for record in existing:
                 if record.get('status') == 'PRESENT':
                     self.marked_students.add(record['roll_no'])
-            
+
             return True, f"Session started for {subject} - Section {section}, Period {period}"
     
     def stop(self):
@@ -118,7 +121,8 @@ class AttendanceSession:
                         date=self.date,
                         time=current_time,
                         status='ABSENT',
-                        confidence=0.0
+                        confidence=0.0,
+                        faculty_id=self.faculty_id
                     )
     
     def mark_student_present(self, roll_no, confidence=0.0):
@@ -183,7 +187,8 @@ class AttendanceSession:
                     date=self.date,
                     time=current_time,
                     status='PRESENT',
-                    confidence=confidence
+                    confidence=confidence,
+                    faculty_id=self.faculty_id
                 )
             
             if success:
@@ -347,9 +352,9 @@ def get_current_session():
     return current_session
 
 
-def start_attendance_session(subject, section, period, date=None):
+def start_attendance_session(subject, section, period, date=None, faculty_id=None):
     """Convenience function to start a session."""
-    return current_session.start(subject, section, period, date)
+    return current_session.start(subject, section, period, date, faculty_id)
 
 
 def stop_attendance_session():
