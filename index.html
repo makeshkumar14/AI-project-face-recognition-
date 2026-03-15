@@ -15,8 +15,13 @@
 </head>
 
 <body>
-    <!-- Animated Background -->
-    <div class="bg-animation">
+    <!-- Video Background -->
+    <video autoplay muted loop id="bg-video">
+        <source src="static/background.mp4" type="video/mp4">
+    </video>
+    <div class="bg-overlay"></div>
+    
+    <div class="bg-animation" style="display: none;">
         <div class="particles"></div>
         <div class="orb orb-1"></div>
         <div class="orb orb-2"></div>

@@ -14,8 +14,11 @@
 </head>
 
 <body class="theme-dark">
-    <!-- Animated Background -->
-    <div class="bg-animated"></div>
+    <!-- Video Background -->
+    <video autoplay muted loop id="bg-video">
+        <source src="{{ url_for('static', filename='background.mp4') }}" type="video/mp4">
+    </video>
+    <div class="bg-overlay"></div>
 
     <!-- Dashboard Layout -->
     <div class="dashboard">
@@ -41,16 +44,11 @@
                 </nav>
             </div>
             <div class="header-right">
-                <a href="/edit_profile" class="user-info" style="text-decoration:none;cursor:pointer;" title="Edit Profile">
-                    <div class="user-avatar">{{ session.get('user_name', 'F')[0] | upper }}</div>
-                    <div class="user-details">
-                        <span class="user-name">{{ session.get('user_name', 'Faculty') }}</span>
-                        <span class="user-role">{{ session.get('user_dept', 'Department') }}</span>
-                    </div>
+                <a href="/edit_profile" class="nav-item" title="Edit Profile">
+                    <span>👤</span> Profile
                 </a>
-                <a href="/logout" class="btn btn-logout" style="text-decoration:none;">
-                    <span class="btn-icon">🚪</span>
-                    Logout
+                <a href="/logout" class="nav-item">
+                    <span>🚪</span> Logout
                 </a>
             </div>
         </header>

@@ -5,20 +5,20 @@
 
 /* CSS Variables - Design Tokens */
 :root {
-    /* Primary Colors - Matching network constellation background */
+    /* Primary Colors - Restoration of Dark Theme */
     --primary-gradient: linear-gradient(135deg, #00d4ff 0%, #7b68ee 100%);
     --primary-color: #00d4ff;
     --primary-dark: #7b68ee;
     --secondary-color: #ff6b8a;
 
-    /* Background Colors */
+    /* Background Colors - Deep Dark */
     --bg-primary: #0d0d1a;
-    --bg-secondary: rgba(15, 15, 35, 0.9);
-    --bg-card: rgba(20, 15, 45, 0.8);
-    --bg-card-hover: rgba(30, 25, 60, 0.9);
-    --bg-glass: rgba(255, 255, 255, 0.08);
+    --bg-secondary: rgba(15, 15, 35, 0.97);
+    --bg-card: rgba(20, 15, 45, 0.94);
+    --bg-card-hover: rgba(30, 25, 60, 0.98);
+    --bg-glass: rgba(255, 255, 255, 0.15);
 
-    /* Text Colors */
+    /* Text Colors - Light on Dark */
     --text-primary: #ffffff;
     --text-secondary: #ffffff;
     --text-muted: #e2e8f0;
@@ -29,7 +29,7 @@
     --accent-warning: #f6ad55;
     --accent-info: #00d4ff;
 
-    /* Shadows */
+    /* Shadows - Glowing for Dark Theme */
     --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
     --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.3);
@@ -67,31 +67,45 @@ html {
 body {
     font-family: var(--font-primary);
     background-color: var(--bg-primary);
-    background-image: url('../background.jpg');
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
-    background-repeat: no-repeat;
     color: var(--text-primary);
     min-height: 100vh;
     line-height: 1.6;
     overflow-x: hidden;
 }
 
-/* Animated Background */
+/* Animated Background / Video Background */
 .bg-animated {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: -1;
+    z-index: -2;
     background-color: var(--bg-primary);
-    background-image: url('../background.jpg');
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
     overflow: hidden;
+}
+
+#bg-video {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    min-width: 100%;
+    min-height: 100%;
+    width: auto;
+    height: auto;
+    z-index: -2;
+    transform: translate(-50%, -50%);
+    object-fit: cover;
+}
+
+.bg-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(3, 0, 20, 0.6); /* Reverted dark overlay */
+    z-index: -1;
 }
 
 .bg-animated::before {
@@ -303,7 +317,7 @@ h4 {
     font-family: inherit;
     color: var(--text-primary);
     background: rgba(255, 255, 255, 0.05);
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: var(--radius-md);
     transition: all var(--transition-normal);
     outline: none;
@@ -374,7 +388,7 @@ h4 {
 .logo-section h1 {
     font-size: 2.5rem;
     margin-bottom: 8px;
-    background: linear-gradient(135deg, #00d4ff 0%, #7b68ee 100%);
+    background: var(--primary-gradient);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -394,7 +408,7 @@ h4 {
 
 .role-card {
     background: var(--bg-card);
-    border: 2px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius-xl);
     padding: 48px 32px;
     text-decoration: none;
@@ -654,11 +668,11 @@ h4 {
 }
 
 .dashboard-header {
-    background: rgba(26, 26, 46, 0.95);
+    background: rgba(20, 20, 40, 0.98);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 50px;
-    padding: 12px 28px;
-    margin: 16px 24px 0 24px;
+    padding: 8px 24px;
+    margin: 12px 24px 0 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -711,7 +725,7 @@ h4 {
 .header-nav {
     display: flex;
     align-items: center;
-    gap: 32px;
+    gap: 12px;
 }
 
 .nav-item {
@@ -720,7 +734,7 @@ h4 {
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transition-fast);
-    padding: 8px 16px;
+    padding: 6px 14px;
     border-radius: 50px;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -728,6 +742,7 @@ h4 {
     display: flex;
     align-items: center;
     gap: 6px;
+    white-space: nowrap;
 }
 
 .nav-item:hover,
@@ -763,7 +778,7 @@ h4 {
 .header-right {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
 }
 
 .user-info {
@@ -2187,7 +2202,7 @@ body.theme-light .stat-card {
     left: 0;
     right: 0;
     height: 4px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.06);
 }
 
 .progress-bar {

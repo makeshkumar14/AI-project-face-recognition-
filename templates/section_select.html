@@ -21,7 +21,7 @@
         }
 
         .section-card {
-            background: rgba(30, 30, 50, 0.95);
+            background: rgba(30,30,50,0.98);
             backdrop-filter: blur(20px);
             border-radius: 24px;
             padding: 3rem;
@@ -186,8 +186,11 @@
 </head>
 
 <body class="theme-dark">
-    <!-- Animated Background -->
-    <div class="bg-animated"></div>
+    <!-- Video Background -->
+    <video autoplay muted loop id="bg-video">
+        <source src="{{ url_for('static', filename='background.mp4') }}" type="video/mp4">
+    </video>
+    <div class="bg-overlay"></div>
 
     <!-- Section Selection Container -->
     <div class="section-container">

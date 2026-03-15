@@ -16,7 +16,7 @@
             padding: 40px 20px;
         }
         .edit-card {
-            background: rgba(30,30,50,0.95);
+            background: rgba(30,30,50,0.98);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 24px;
@@ -144,7 +144,11 @@
     </style>
 </head>
 <body class="theme-dark">
-    <div class="bg-animated"></div>
+    <!-- Video Background -->
+    <video autoplay muted loop id="bg-video">
+        <source src="{{ url_for('static', filename='background.mp4') }}" type="video/mp4">
+    </video>
+    <div class="bg-overlay"></div>
 
     <div class="edit-profile-container">
         <div class="edit-card">
