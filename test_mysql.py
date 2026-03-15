@@ -5,7 +5,7 @@ config = {
     'host': '127.0.0.1',
     'port': 3306,
     'user': 'root',
-    'password': 'makesh14',
+    'password': 'ratchu@2007',
 }
 
 try:

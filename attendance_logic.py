@@ -5,6 +5,7 @@ Manages attendance sessions and enforces business rules
 
 import threading
 from datetime import datetime
+from typing import Dict, List, Set, Optional
 from models import (
     get_all_students, 
     get_student_by_roll_no,
@@ -65,7 +66,8 @@ class AttendanceSession:
                 subject=self.subject,
                 section=self.section,
                 period=self.period,
-                date=self.date
+                date=self.date,
+                faculty_id=self.faculty_id
             )
             for record in existing:
                 if record.get('status') == 'PRESENT':
@@ -110,7 +112,8 @@ class AttendanceSession:
                     self.subject, 
                     self.section, 
                     self.period, 
-                    self.date
+                    self.date,
+                    faculty_id=self.faculty_id
                 )
                 if not existing:
                     mark_attendance(
@@ -160,13 +163,13 @@ class AttendanceSession:
             
             current_time = datetime.now().strftime('%H:%M:%S')
             
-            # Check if an ABSENT record already exists to UPDATE instead of INSERT
             existing = check_attendance_exists(
                 student['id'], 
                 self.subject, 
                 self.section, 
                 self.period, 
-                self.date
+                self.date,
+                faculty_id=self.faculty_id
             )
             
             if existing:
@@ -177,7 +180,8 @@ class AttendanceSession:
                     self.period,
                     self.date,
                     'PRESENT',
-                    current_time
+                    current_time,
+                    faculty_id=self.faculty_id
                 )
                 success = True
             else:
@@ -297,7 +301,8 @@ class AttendanceSession:
             subject=self.subject,
             section=self.section,
             period=self.period,
-            date=self.date
+            date=self.date,
+            faculty_id=self.faculty_id
         )
         
         # Build maps
@@ -352,43 +357,50 @@ class AttendanceSession:
         }
 
 
-# Global session instance
-current_session = AttendanceSession()
+# Multi-session storage per faculty
+faculty_sessions: Dict[int, AttendanceSession] = {}
 
-
-def get_current_session():
-    """Get the global attendance session."""
-    return current_session
+def get_faculty_session(faculty_id) -> AttendanceSession:
+    """Get or create an attendance session for a specific faculty member."""
+    if faculty_id not in faculty_sessions:
+        faculty_sessions[faculty_id] = AttendanceSession()
+    return faculty_sessions[faculty_id]
 
 
 def start_attendance_session(subject, section, department, period, date=None, faculty_id=None, force=True, color='transparent'):
-    """Convenience function to start a session."""
-    return current_session.start(subject, section, department, period, date, faculty_id, force=force, color=color)
+    """Start a session for a specific faculty."""
+    session = get_faculty_session(faculty_id)
+    return session.start(subject, section, department, period, date, faculty_id, force=force, color=color)
 
 
-def stop_attendance_session():
-    """Convenience function to stop the session."""
-    return current_session.stop()
+def stop_attendance_session(faculty_id):
+    """Stop the session for a specific faculty."""
+    session = get_faculty_session(faculty_id)
+    return session.stop()
 
 
-def mark_present(roll_no, confidence=0.0):
-    """Convenience function to mark student present."""
-    return current_session.mark_student_present(roll_no, confidence)
+def mark_present(faculty_id, roll_no, confidence=0.0):
+    """Mark student present in faculty's session."""
+    session = get_faculty_session(faculty_id)
+    return session.mark_student_present(roll_no, confidence)
 
 
-def mark_absent(roll_no):
-    """Convenience function to mark student absent."""
-    return current_session.mark_student_absent(roll_no)
+def mark_absent(faculty_id, roll_no):
+    """Mark student absent in faculty's session."""
+    session = get_faculty_session(faculty_id)
+    return session.mark_student_absent(roll_no)
 
 
-def get_session_summary():
-    """Convenience function to get session summary."""
-    return current_session.get_session_summary()
+def get_session_summary(faculty_id):
+    """Get summary for faculty's session."""
+    session = get_faculty_session(faculty_id)
+    return session.get_session_summary()
 
 
-def reset_session():
-    """Convenience function to reset current session."""
-    return current_session.reset()
+def reset_session(faculty_id):
+    """Reset faculty's session."""
+    session = get_faculty_session(faculty_id)
+    return session.reset()
 
 
 # Testing

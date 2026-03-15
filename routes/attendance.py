@@ -10,7 +10,7 @@ from flask import Blueprint, request, jsonify, session, Response
 
 from models import get_all_students, get_attendance, get_student_attendance_history
 from attendance_logic import (
-    get_current_session,
+    get_faculty_session,
     start_attendance_session,
     stop_attendance_session,
     mark_present,
@@ -51,7 +51,8 @@ def start_attendance():
     
     subject = data.get('subject', '').strip()
     section = data.get('section', '').strip()
-    period = data.get('period', '').strip()
+    department = data.get('department', '').strip()
+    period = str(data.get('period', '1')).strip()
     date = data.get('date')  # Optional
     
     # Validation
@@ -74,10 +75,11 @@ def start_attendance():
         }), 400
     
     # Start the session
-    success, message = start_attendance_session(subject, section, period, date)
+    faculty_id = session.get('user_id')
+    success, message = start_attendance_session(subject, section, department, period, date, faculty_id=faculty_id)
     
     if success:
-        session_obj = get_current_session()
+        session_obj = get_faculty_session(faculty_id)
         return jsonify({
             'success': True,
             'message': message,
@@ -103,7 +105,8 @@ def stop_attendance():
         "result": { subject, section, period, date, duration, students_marked }
     }
     """
-    success, result = stop_attendance_session()
+    faculty_id = session.get('user_id')
+    success, result = stop_attendance_session(faculty_id)
     
     if success:
         return jsonify({
@@ -123,7 +126,8 @@ def session_status():
     """
     Get the current session status.
     """
-    session_obj = get_current_session()
+    faculty_id = session.get('user_id')
+    session_obj = get_faculty_session(faculty_id)
     return jsonify(session_obj.get_status())
 
 
@@ -155,7 +159,8 @@ def mark_student_present():
             'message': 'Roll number is required'
         }), 400
     
-    success, message = mark_present(roll_no, confidence)
+    faculty_id = session.get('user_id')
+    success, message = mark_present(faculty_id, roll_no, confidence)
     
     return jsonify({
         'success': success,
@@ -189,7 +194,8 @@ def mark_student_absent():
             'message': 'Roll number is required'
         }), 400
     
-    success, message = mark_absent(roll_no)
+    faculty_id = session.get('user_id')
+    success, message = mark_absent(faculty_id, roll_no)
     
     return jsonify({
         'success': success,
@@ -218,7 +224,8 @@ def get_attendance_data():
     }
     """
     # Check if we have an active session and no filters provided
-    session_obj = get_current_session()
+    faculty_id = session.get('user_id')
+    session_obj = get_faculty_session(faculty_id)
     
     subject = request.args.get('subject')
     section = request.args.get('section')
@@ -227,7 +234,7 @@ def get_attendance_data():
     
     # If session is active and no filters, use session data
     if session_obj.is_active and not any([subject, section]):
-        summary = get_session_summary()
+        summary = get_session_summary(faculty_id)
         if summary:
             return jsonify({
                 'success': True,
@@ -300,17 +307,10 @@ def get_attendance_data():
 @attendance_bp.route('/export_csv', methods=['GET'])
 def export_csv():
     """
-    Export attendance data as CSV file.
-    
-    Query parameters:
-    - subject: Filter by subject
-    - section: Filter by section  
-    - period: Filter by period
-    - date: Filter by date (YYYY-MM-DD)
-    
-    Returns: CSV file download
+    ... (omitted docstring)
     """
-    session_obj = get_current_session()
+    faculty_id = session.get('user_id')
+    session_obj = get_faculty_session(faculty_id)
     
     subject = request.args.get('subject') or session_obj.subject or 'All'
     section = request.args.get('section') or session_obj.section or 'A'

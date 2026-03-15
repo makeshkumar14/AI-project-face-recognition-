@@ -183,14 +183,24 @@ function startAttendance() {
   startBtn.disabled = true;
   startBtn.innerHTML = '<span class="btn-icon">⏳</span> Starting...';
 
+  // Get metadata from UI banner
+  const subject = document.getElementById('sessionSubject')?.textContent.trim() || 'General';
+  const deptSec = document.getElementById('sessionDeptSec')?.textContent.trim() || 'CSE - A';
+  const period = document.getElementById('sessionPeriod')?.textContent.trim() || '1';
+  
+  const parts = deptSec.split(' - ');
+  const department = parts[0] || 'CSE';
+  const section = parts[1] || 'A';
+
   // Call backend API to start attendance session
   fetch("/api/start_attendance", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      subject: document.getElementById('sessionSubject')?.textContent || 'General',
-      section: 'A',
-      period: '1'
+      subject: subject,
+      section: section,
+      department: department,
+      period: period
     })
   })
     .then((response) => response.json())

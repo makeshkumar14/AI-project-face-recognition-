@@ -68,8 +68,11 @@
                     </div>
                     <div class="session-item">
                         <span class="session-label">🏛️ Dept-Sec</span>
-                        <span class="session-value" id="sessionDeptSec">{{ session.get('current_department', 'CSE') }} -
-                            {{ session.get('current_section', 'A') }}</span>
+                        <span class="session-value" id="sessionDeptSec">{{ session.get('current_department', 'CSE') }} - {{ session.get('current_section', 'A') }}</span>
+                    </div>
+                    <div class="session-item">
+                        <span class="session-label">🕒 Period</span>
+                        <span class="session-value" id="sessionPeriod">{{ session.get('current_period', '1') }}</span>
                     </div>
                     <div class="session-item">
                         <span class="session-label">📅 Date</span>

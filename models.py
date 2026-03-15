@@ -13,7 +13,7 @@ MYSQL_CONFIG = {
     'host': os.environ.get('MYSQL_HOST', 'localhost'),
     'port': int(os.environ.get('MYSQL_PORT', 3306)),
     'user': os.environ.get('MYSQL_USER', 'root'),
-    'password': os.environ.get('MYSQL_PASSWORD', 'makesh14'),
+    'password': os.environ.get('MYSQL_PASSWORD', 'ratchu@2007'),
     'database': os.environ.get('MYSQL_DATABASE', 'face_recognition_db'),
 }
 
@@ -295,6 +295,11 @@ def get_student_by_id(student_id):
         (student_id,)
     )
     student = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return student
+
+
 def get_student_by_name(name):
     """Get a student by name."""
     conn = get_db_connection()
@@ -402,30 +407,32 @@ def mark_attendance(student_id, subject, section, department, period, date, time
         return False
 
 
-def update_attendance_status(student_id, subject, section, period, date, new_status, time=None):
+def update_attendance_status(student_id, subject, section, period, date, new_status, time=None, faculty_id=None):
     """Update an existing attendance record."""
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    query = "UPDATE attendance SET status = %s"
+    params = [new_status]
+    
     if time:
-        cursor.execute(
-            '''UPDATE attendance 
-               SET status = %s, time = %s
-               WHERE student_id = %s AND subject = %s AND section = %s AND period = %s AND date = %s''',
-            (new_status, time, student_id, subject, section, period, date)
-        )
-    else:
-        cursor.execute(
-            '''UPDATE attendance 
-               SET status = %s
-               WHERE student_id = %s AND subject = %s AND section = %s AND period = %s AND date = %s''',
-            (new_status, student_id, subject, section, period, date)
-        )
+        query += ", time = %s"
+        params.append(time)
+        
+    query += " WHERE student_id = %s AND subject = %s AND section = %s AND period = %s AND date = %s"
+    params.extend([student_id, subject, section, period, date])
+    
+    if faculty_id:
+        query += " AND faculty_id = %s"
+        params.append(faculty_id)
+        
+    cursor.execute(query, params)
     conn.commit()
     cursor.close()
     conn.close()
 
 
-def get_attendance(subject=None, section=None, period=None, date=None, student_id=None):
+def get_attendance(subject=None, section=None, period=None, date=None, student_id=None, faculty_id=None):
     """Get attendance records with optional filters."""
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -453,6 +460,9 @@ def get_attendance(subject=None, section=None, period=None, date=None, student_i
     if student_id:
         query += ' AND a.student_id = %s'
         params.append(student_id)
+    if faculty_id:
+        query += ' AND a.faculty_id = %s'
+        params.append(faculty_id)
     
     query += ' ORDER BY a.time DESC'
     
@@ -481,15 +491,20 @@ def get_student_attendance_history(roll_no, limit=50):
     return records
 
 
-def check_attendance_exists(student_id, subject, section, period, date):
+def check_attendance_exists(student_id, subject, section, period, date, faculty_id=None):
     """Check if attendance already exists for a student in this session."""
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute(
-        '''SELECT * FROM attendance 
-           WHERE student_id = %s AND subject = %s AND section = %s AND period = %s AND date = %s''',
-        (student_id, subject, section, period, date)
-    )
+    
+    query = '''SELECT * FROM attendance 
+               WHERE student_id = %s AND subject = %s AND section = %s AND period = %s AND date = %s'''
+    params = [student_id, subject, section, period, date]
+    
+    if faculty_id:
+        query += ' AND faculty_id = %s'
+        params.append(faculty_id)
+        
+    cursor.execute(query, params)
     record = cursor.fetchone()
     cursor.close()
     conn.close()
@@ -559,7 +574,7 @@ def get_faculty_attendance_history(faculty_id, limit=20):
     cursor.execute('SELECT COUNT(*) AS cnt FROM students')
     total_students = cursor.fetchone()['cnt'] or 0
 
-    # Get distinct sessions — include faculty_id IS NULL for older records
+    # Get distinct sessions — strictly for this faculty member
     cursor.execute('''
         SELECT 
             a.subject, a.section, a.department, a.period, a.date, a.color,
@@ -567,7 +582,7 @@ def get_faculty_attendance_history(faculty_id, limit=20):
             SUM(CASE WHEN a.status = 'ABSENT'  THEN 1 ELSE 0 END) AS absent_count,
             MIN(a.time) AS start_time
         FROM attendance a
-        WHERE a.faculty_id = %s OR a.faculty_id IS NULL
+        WHERE a.faculty_id = %s
         GROUP BY a.subject, a.section, a.department, a.period, a.date, a.color
         ORDER BY a.date DESC, a.period ASC
         LIMIT %s
@@ -593,7 +608,7 @@ def get_faculty_stats(faculty_id):
             SUM(CASE WHEN status = 'PRESENT' THEN 1 ELSE 0 END) AS total_present,
             COUNT(DISTINCT subject) AS unique_subjects
         FROM attendance
-        WHERE faculty_id = %s OR faculty_id IS NULL
+        WHERE faculty_id = %s
     ''', (faculty_id,))
     row = cursor.fetchone()
     cursor.close()

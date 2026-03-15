@@ -453,7 +453,8 @@ def api_attendance_data():
     from attendance_logic import get_session_summary
     from models import get_all_students
 
-    summary = get_session_summary()
+    faculty_id = session.get('user_id')
+    summary = get_session_summary(faculty_id)
     current_section = summary['session'].get('section') if summary else None
     all_students = get_all_students(section=current_section)
 
@@ -514,7 +515,8 @@ def api_get_students():
 @app.route('/api/reset_session', methods=['POST'])
 def api_reset_session():
     from attendance_logic import reset_session
-    success, message = reset_session()
+    faculty_id = session.get('user_id')
+    success, message = reset_session(faculty_id)
     return jsonify({'success': success, 'message': message})
 
 
@@ -525,8 +527,8 @@ def api_export_excel():
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     import io
-
-    summary = get_session_summary()
+    faculty_id = session.get('user_id')
+    summary = get_session_summary(faculty_id)
     all_students = get_all_students()
     wb = Workbook()
     ws = wb.active
@@ -585,8 +587,9 @@ def api_export_excel():
 def video_feed():
     try:
         from face_recognition_module import WebcamCapture
-        from attendance_logic import get_current_session, mark_present
+        from attendance_logic import get_faculty_session, mark_present
         import cv2, time
+        faculty_id = session.get('user_id')
 
         try:
             from advanced_face_recognition import get_recognizer, draw_recognition_boxes
@@ -614,7 +617,7 @@ def video_feed():
                     if frame is None:
                         time.sleep(0.01); continue
 
-                    session_obj = get_current_session()
+                    session_obj = get_faculty_session(faculty_id)
                     display_frame = frame.copy()
 
                     if session_obj.is_active:
@@ -627,7 +630,7 @@ def video_feed():
                                     last_advanced_results = results
                                     voting_result = recognizer.get_voting_result()
                                     if voting_result and voting_result['status'] == 'confirmed':
-                                        mark_present(voting_result['name'], voting_result['confidence'] * 100)
+                                        mark_present(faculty_id, voting_result['name'], voting_result['confidence'] * 100)
                                         # recognizer.clear_voting_buffer() # Keep buffer for continuity or clear if you want 1 ID at a time
                                 display_frame = draw_recognition_boxes(display_frame, last_advanced_results)
                             else:
@@ -635,7 +638,7 @@ def video_feed():
                                     recognized = face_manager.recognize_faces(frame)
                                     for face in recognized:
                                         if face.get('roll_no') and face['roll_no'] != 'UNKNOWN':
-                                            mark_present(face['roll_no'], face['confidence'])
+                                            mark_present(faculty_id, face['roll_no'], face['confidence'])
                                     last_basic_results = recognized
                                 display_frame = draw_face_boxes(display_frame, last_basic_results)
                         except Exception as e:
