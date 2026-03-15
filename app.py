@@ -233,6 +233,7 @@ def api_faculty_history():
     """Return past attendance sessions for the logged-in faculty."""
     from models import get_faculty_attendance_history
     faculty_id = session.get('user_id')
+    faculty_dept = session.get('user_dept', '')
     records = get_faculty_attendance_history(faculty_id, limit=20)
 
     history = []
@@ -244,6 +245,7 @@ def api_faculty_history():
             'date': str(r['date']),
             'subject': r['subject'],
             'section': r['section'],
+            'department': faculty_dept,
             'period': r['period'],
             'total': total,
             'present': present,
@@ -253,6 +255,84 @@ def api_faculty_history():
         })
 
     return jsonify({'success': True, 'history': history})
+
+
+@app.route('/api/faculty/export_session')
+@require_faculty
+def api_export_session():
+    """Generate Excel for a specific past attendance session."""
+    subject = request.args.get('subject', '')
+    section = request.args.get('section', '')
+    period  = request.args.get('period', '')
+    date    = request.args.get('date', '')
+
+    if not subject or not section or not period or not date:
+        return jsonify({'error': 'Missing parameters'}), 400
+
+    from models import get_attendance, get_all_students
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    import io
+
+    records = get_attendance(subject=subject, section=section, period=period, date=date)
+    all_students = get_all_students(section=section)
+
+    # Build lookup of present students
+    present_map = {}
+    for r in records:
+        if r.get('status') == 'PRESENT':
+            present_map[r['student_id']] = {
+                'time': r.get('time', '--'),
+                'confidence': r.get('confidence', 0)
+            }
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Attendance Report"
+
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="4F46E5", end_color="4F46E5", fill_type="solid")
+    present_fill = PatternFill(start_color="D1FAE5", end_color="D1FAE5", fill_type="solid")
+    absent_fill  = PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid")
+    thin = Border(left=Side(style='thin'), right=Side(style='thin'),
+                  top=Side(style='thin'), bottom=Side(style='thin'))
+
+    ws['A1'] = "Attendance Report"; ws['A1'].font = Font(bold=True, size=16)
+    ws['A2'] = f"Date: {date}"
+    ws['A3'] = f"Subject: {subject}"
+    ws['A4'] = f"Section: {section}"
+    ws['A5'] = f"Period: {period}"
+    ws['A6'] = f"Faculty: {session.get('user_name', 'N/A')}"
+
+    headers = ['S.No', 'Roll No', 'Student Name', 'Status', 'Time', 'Confidence (%)']
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=8, column=col, value=h)
+        cell.font = header_font; cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center'); cell.border = thin
+
+    for i, student in enumerate(all_students, 1):
+        is_present = student['id'] in present_map
+        status = 'PRESENT' if is_present else 'ABSENT'
+        time_str = present_map[student['id']]['time'] if is_present else '--'
+        conf = present_map[student['id']]['confidence'] if is_present else 0
+        row_data = [i, student['roll_no'], student['name'], status, time_str,
+                    f"{conf:.1f}" if conf else '--']
+        for col, val in enumerate(row_data, 1):
+            cell = ws.cell(row=8+i, column=col, value=val)
+            cell.border = thin; cell.alignment = Alignment(horizontal='center')
+            if col == 4:
+                cell.fill = present_fill if is_present else absent_fill
+
+    for col, w in zip(['A','B','C','D','E','F'], [8, 15, 25, 12, 12, 15]):
+        ws.column_dimensions[col].width = w
+
+    buffer = io.BytesIO(); wb.save(buffer); buffer.seek(0)
+    fname = f"Attendance_{subject}_{section}_{date}.xlsx".replace(' ', '_')
+
+    from flask import send_file
+    return send_file(buffer,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     as_attachment=True, download_name=fname)
 
 
 # ─── Student Image Serving ────────────────────────────────────────────────────

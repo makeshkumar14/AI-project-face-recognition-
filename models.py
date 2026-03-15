@@ -483,26 +483,40 @@ def delete_attendance(subject, section, period, date):
 # ========================================
 
 def get_faculty_attendance_history(faculty_id, limit=20):
-    """Get past attendance sessions for a specific faculty member."""
+    """Get past attendance sessions for a specific faculty member.
+    
+    Total = all enrolled students (same as recognition page).
+    Includes records with faculty_id NULL (older sessions).
+    """
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
+
+    # Total students = same as recognition page (all students, no section filter)
+    cursor.execute('SELECT COUNT(*) AS cnt FROM students')
+    total_students = cursor.fetchone()['cnt'] or 0
+
+    # Get distinct sessions — include faculty_id IS NULL for older records
     cursor.execute('''
         SELECT 
             a.subject, a.section, a.period, a.date,
-            COUNT(*) AS total,
             SUM(CASE WHEN a.status = 'PRESENT' THEN 1 ELSE 0 END) AS present_count,
-            SUM(CASE WHEN a.status = 'ABSENT' THEN 1 ELSE 0 END) AS absent_count,
+            SUM(CASE WHEN a.status = 'ABSENT'  THEN 1 ELSE 0 END) AS absent_count,
             MIN(a.time) AS start_time
         FROM attendance a
-        WHERE a.faculty_id = %s
+        WHERE a.faculty_id = %s OR a.faculty_id IS NULL
         GROUP BY a.subject, a.section, a.period, a.date
         ORDER BY a.date DESC, a.period ASC
         LIMIT %s
     ''', (faculty_id, limit))
-    records = cursor.fetchall()
+    sessions = cursor.fetchall()
+
+    # Set total = all students (matches recognition page)
+    for s in sessions:
+        s['total'] = total_students
+
     cursor.close()
     conn.close()
-    return records
+    return sessions
 
 
 def get_faculty_stats(faculty_id):
@@ -515,7 +529,7 @@ def get_faculty_stats(faculty_id):
             SUM(CASE WHEN status = 'PRESENT' THEN 1 ELSE 0 END) AS total_present,
             COUNT(DISTINCT subject) AS unique_subjects
         FROM attendance
-        WHERE faculty_id = %s
+        WHERE faculty_id = %s OR faculty_id IS NULL
     ''', (faculty_id,))
     row = cursor.fetchone()
     cursor.close()

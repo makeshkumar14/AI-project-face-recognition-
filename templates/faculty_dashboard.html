@@ -29,29 +29,29 @@
             </div>
             <div class="header-center">
                 <nav class="header-nav">
+                    <a href="/faculty_profile" class="nav-item" style="text-decoration:none;">Profile</a>
                     <span class="nav-item active">Dashboard</span>
-                    <span class="nav-item">Attendance</span>
                     <span class="nav-item">Reports</span>
-                    <span class="nav-item">Settings</span>
                 </nav>
             </div>
             <div class="header-right">
-                <div class="user-info">
-                    <div class="user-avatar">FK</div>
+                <a href="/faculty_profile" class="user-info" style="text-decoration:none;cursor:pointer;">
+                    <div class="user-avatar">{{ session.get('user_name', 'F')[0] | upper }}</div>
                     <div class="user-details">
-                        <span class="user-name">Prof. Faculty</span>
-                        <span class="user-role">Department of CSE</span>
+                        <span class="user-name">{{ session.get('user_name', 'Faculty') }}</span>
+                        <span class="user-role">{{ session.get('user_dept', 'Department') }}</span>
                     </div>
-                </div>
+                </a>
                 <button class="btn btn-outline theme-toggle-btn" onclick="toggleTheme()">
                     <span class="theme-icon">🌙</span>
                 </button>
-                <button class="btn btn-logout" onclick="logout()">
+                <a href="/logout" class="btn btn-logout" style="text-decoration:none;">
                     <span class="btn-icon">🚪</span>
                     Logout
-                </button>
+                </a>
             </div>
         </header>
+
 
         <!-- Dashboard Content -->
         <main class="dashboard-content">
