@@ -583,7 +583,25 @@
             tbody.innerHTML = data.history.map(row => {
                 const pct     = row.percentage;
                 const pctClass = pct >= 75 ? 'pct-high' : pct >= 50 ? 'pct-mid' : 'pct-low';
-                const deptSection = (row.department ? row.department + ' – ' : '') + row.section;
+                
+                // Map full department names to abbreviations
+                const deptMap = {
+                    'Computer Science': 'CSE',
+                    'CSE – Computer Science': 'CSE',
+                    'Electronics': 'ECE',
+                    'ECE – Electronics': 'ECE',
+                    'Information Technology': 'IT',
+                    'IT – Information Technology': 'IT',
+                    'Electrical': 'EEE',
+                    'EEE – Electrical': 'EEE',
+                    'Mechanical': 'MECH',
+                    'MECH – Mechanical': 'MECH',
+                    'Civil Engineering': 'CIVIL',
+                    'CIVIL – Civil Engineering': 'CIVIL'
+                };
+                const deptAbbr = deptMap[row.department] || row.department || '';
+                const deptSection = (deptAbbr ? deptAbbr + ' – ' : '') + row.section;
+                
                 const exportUrl = `/api/faculty/export_session?subject=${encodeURIComponent(row.subject)}&section=${encodeURIComponent(row.section)}&period=${encodeURIComponent(row.period)}&date=${encodeURIComponent(row.date)}`;
                 return `
                     <tr>
