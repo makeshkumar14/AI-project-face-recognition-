@@ -13,7 +13,7 @@ MYSQL_CONFIG = {
     'host': os.environ.get('MYSQL_HOST', 'localhost'),
     'port': int(os.environ.get('MYSQL_PORT', 3306)),
     'user': os.environ.get('MYSQL_USER', 'root'),
-    'password': os.environ.get('MYSQL_PASSWORD', 'makesh14'),
+    'password': os.environ.get('MYSQL_PASSWORD', 'ratchu@2007'),
     'database': os.environ.get('MYSQL_DATABASE', 'face_recognition_db'),
 }
 
@@ -330,6 +330,25 @@ def add_faculty(name, email, password, department='Computer Science'):
         cursor.execute(
             'INSERT INTO faculty (name, email, password_hash, department) VALUES (%s, %s, %s, %s)',
             (name, email, password_hash, department)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return True
+    except mysql.connector.IntegrityError:
+        cursor.close()
+        conn.close()
+        return False
+
+
+def update_faculty(faculty_id, name, email, department):
+    """Update faculty info."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            'UPDATE faculty SET name = %s, email = %s, department = %s WHERE id = %s',
+            (name, email, department, faculty_id)
         )
         conn.commit()
         cursor.close()

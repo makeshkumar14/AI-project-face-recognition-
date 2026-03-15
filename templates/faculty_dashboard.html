@@ -29,13 +29,13 @@
             </div>
             <div class="header-center">
                 <nav class="header-nav">
-                    <a href="/faculty_profile" class="nav-item" style="text-decoration:none;">Profile</a>
-                    <span class="nav-item active">Dashboard</span>
+                    <a href="/faculty_profile" class="nav-item" style="text-decoration:none;">Dashboard</a>
+                    <span class="nav-item active">Attendance</span>
                     <span class="nav-item">Reports</span>
                 </nav>
             </div>
             <div class="header-right">
-                <a href="/faculty_profile" class="user-info" style="text-decoration:none;cursor:pointer;">
+                <a href="/edit_profile" class="user-info" style="text-decoration:none;cursor:pointer;" title="Edit Profile">
                     <div class="user-avatar">{{ session.get('user_name', 'F')[0] | upper }}</div>
                     <div class="user-details">
                         <span class="user-name">{{ session.get('user_name', 'Faculty') }}</span>

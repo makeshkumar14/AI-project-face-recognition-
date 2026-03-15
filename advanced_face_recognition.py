@@ -26,10 +26,15 @@ import cv2
 import numpy as np
 from PIL import Image
 
-# Add temp torch installation to path
-TORCH_PATH = os.path.join(os.environ.get('TEMP', '/tmp'), 'torch_temp')
-if TORCH_PATH not in sys.path:
+# Add short-path torch installation to path (to avoid Windows path length issues)
+TORCH_PATH = r'C:\faceattend_lib'
+if os.path.exists(TORCH_PATH) and TORCH_PATH not in sys.path:
     sys.path.insert(0, TORCH_PATH)
+elif os.path.join(os.environ.get('TEMP', ''), 'torch_temp') not in sys.path:
+    # Fallback to previous temp path if short path doesn't exist
+    TEMP_TORCH = os.path.join(os.environ.get('TEMP', ''), 'torch_temp')
+    if os.path.exists(TEMP_TORCH):
+        sys.path.insert(0, TEMP_TORCH)
 
 import torch
 from facenet_pytorch import MTCNN, InceptionResnetV1

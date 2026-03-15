@@ -139,6 +139,40 @@ def faculty_profile():
     return render_template('faculty_profile.html')
 
 
+@app.route('/edit_profile', methods=['GET', 'POST'])
+@require_faculty
+def edit_profile():
+    """Edit faculty personal details."""
+    from models import update_faculty
+    faculty_id = session.get('user_id')
+    
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        email = request.form.get('email', '').strip()
+        department = request.form.get('department', '').strip()
+        
+        if not name or not email:
+            return render_template('edit_profile.html', 
+                                 name=name, email=email, department=department,
+                                 error="Name and Email are required.")
+        
+        if update_faculty(faculty_id, name, email, department):
+            # Update session
+            session['user_name'] = name
+            session['user_email'] = email
+            session['user_dept'] = department
+            return redirect(url_for('faculty_profile'))
+        else:
+            return render_template('edit_profile.html', 
+                                 name=name, email=email, department=department,
+                                 error="Could not update profile. Email might already be in use.")
+
+    return render_template('edit_profile.html',
+                         name=session.get('user_name'),
+                         email=session.get('user_email'),
+                         department=session.get('user_dept'))
+
+
 # ─── Bridge: Profile → Webcam Attendance Page ────────────────────────────────
 @app.route('/begin_attendance')
 @require_faculty

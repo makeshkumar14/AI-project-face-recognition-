@@ -310,19 +310,19 @@
             </div>
             <div class="header-center">
                 <nav class="header-nav">
-                    <a href="/faculty_profile" class="nav-item active" style="text-decoration:none;">Profile</a>
-                    <span class="nav-item">Dashboard</span>
+                    <a href="/faculty_profile" class="nav-item active" style="text-decoration:none;">Dashboard</a>
+                    <span class="nav-item">Attendance</span>
                     <span class="nav-item">Reports</span>
                 </nav>
             </div>
             <div class="header-right">
-                <div class="user-info">
+                <a href="/edit_profile" class="user-info" style="text-decoration:none; cursor:pointer;" title="Edit Profile">
                     <div class="user-avatar" id="navAvatar">?</div>
                     <div class="user-details">
                         <span class="user-name" id="navName">Loading…</span>
                         <span class="user-role" id="navDept">Faculty</span>
                     </div>
-                </div>
+                </a>
                 <button class="btn btn-outline theme-toggle-btn" onclick="toggleTheme()" style="padding:10px;">
                     <span class="theme-icon">🌙</span>
                 </button>
@@ -337,7 +337,7 @@
         <div class="page-content">
 
             <!-- Profile Hero -->
-            <div class="profile-hero">
+            <div class="profile-hero" onclick="window.location.href='/edit_profile'" style="cursor:pointer;" title="Click to Edit Profile">
                 <div class="avatar-circle" id="avatarLetter">?</div>
                 <div class="hero-info">
                     <h1 id="heroName">Loading…</h1>

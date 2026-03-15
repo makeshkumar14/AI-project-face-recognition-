@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Profile | SmartAttend</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .edit-profile-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+        .edit-card {
+            background: rgba(30,30,50,0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.5);
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .edit-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .edit-avatar-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 25px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #fff;
+            margin: 0 auto 15px;
+            box-shadow: 0 8px 24px rgba(99,102,241,0.35);
+        }
+        .edit-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+        .edit-header p {
+            color: rgba(255,255,255,0.5);
+            font-size: 0.9rem;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            display: block;
+            color: rgba(255,255,255,0.6);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+        .form-input, .form-select {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: #fff;
+            outline: none;
+            transition: all 0.25s;
+            font-size: 0.95rem;
+        }
+        .form-input:focus, .form-select:focus {
+            border-color: #6366f1;
+            background: rgba(99,102,241,0.05);
+            box-shadow: 0 0 0 4px rgba(99,102,241,0.1);
+        }
+        .form-select option {
+            background: #1e1e32;
+            color: #fff;
+        }
+        .edit-footer {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+        }
+        .btn-cancel {
+            flex: 1;
+            padding: 14px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-save {
+            flex: 2;
+            padding: 14px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 8px 20px rgba(99,102,241,0.25);
+        }
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(99,102,241,0.35);
+        }
+        .btn-cancel:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        .alert {
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .alert-error {
+            background: rgba(244,63,94,0.1);
+            border: 1px solid rgba(244,63,94,0.2);
+            color: #fb7185;
+        }
+    </style>
+</head>
+<body class="theme-dark">
+    <div class="bg-animated"></div>
+
+    <div class="edit-profile-container">
+        <div class="edit-card">
+            <div class="edit-header">
+                <div class="edit-avatar-preview">{{ name[0] | upper }}</div>
+                <h2>Edit Profile</h2>
+                <p>Update your personal information</p>
+            </div>
+
+            {% if error %}
+            <div class="alert alert-error">
+                <span>⚠️</span> {{ error }}
+            </div>
+            {% endif %}
+
+            <form action="{{ url_for('edit_profile') }}" method="POST">
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" name="name" class="form-input" value="{{ name }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email / Username</label>
+                    <input type="email" name="email" class="form-input" value="{{ email }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Department</label>
+                    <select name="department" class="form-select" required>
+                        <option value="CSE" {% if department == 'CSE' %}selected{% endif %}>CSE – Computer Science</option>
+                        <option value="ECE" {% if department == 'ECE' %}selected{% endif %}>ECE – Electronics</option>
+                        <option value="IT" {% if department == 'IT' %}selected{% endif %}>IT – Information Technology</option>
+                        <option value="EEE" {% if department == 'EEE' %}selected{% endif %}>EEE – Electrical</option>
+                        <option value="MECH" {% if department == 'MECH' %}selected{% endif %}>MECH – Mechanical</option>
+                        <option value="CIVIL" {% if department == 'CIVIL' %}selected{% endif %}>CIVIL – Civil Engineering</option>
+                    </select>
+                </div>
+
+                <div class="edit-footer">
+                    <a href="{{ url_for('faculty_profile') }}" class="btn-cancel">Cancel</a>
+                    <button type="submit" class="btn-save">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
