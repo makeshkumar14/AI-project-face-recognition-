@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Reports | SmartAttend</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .reports-page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .page-content {
+            flex: 1;
+            padding: 32px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .report-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 24px;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 15px;
+        }
+        .report-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .report-title h2 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .date-badge {
+            background: rgba(99, 102, 241, 0.15);
+            color: #818cf8;
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .table-wrap { overflow-x: auto; }
+        table.report-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table.report-table th {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.02);
+        }
+        table.report-table td {
+            padding: 14px 16px;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        .period-bubble {
+            display: inline-block;
+            padding: 4px 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #fff;
+        }
+        .status-present { color: #34d399; font-weight: 600; }
+        .status-absent { color: #f87171; font-weight: 600; }
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: rgba(255, 255, 255, 0.3);
+        }
+        .empty-state span { font-size: 3rem; display: block; margin-bottom: 15px; }
+        
+        .filters-bar {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+        .filter-group { flex: 1; }
+        .filter-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 8px;
+        }
+        .filter-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+            color: #fff;
+            outline: none;
+        }
+    </style>
+</head>
+<body class="theme-dark">
+    <div class="bg-animated"></div>
+
+    <div class="reports-page">
+        <!-- Navbar -->
+        <header class="dashboard-header" style="margin:16px 24px 0 24px;">
+            <div class="header-left">
+                <div class="header-brand">
+                    <span class="header-logo-icon">⚡</span>
+                    <span class="header-brand-text">SmartAttend</span>
+                </div>
+            </div>
+            <div class="header-center">
+                <nav class="header-nav">
+                    <a href="{{ url_for('faculty_profile') }}" class="nav-item">
+                        <span>🏠</span> Dashboard
+                    </a>
+                    <a href="{{ url_for('faculty_dashboard') }}" class="nav-item">
+                        <span>📋</span> Attendance
+                    </a>
+                    <a href="{{ url_for('faculty_reports') }}" class="nav-item active">
+                        <span>📊</span> Reports
+                    </a>
+                </nav>
+            </div>
+            <div class="header-right">
+                <a href="/edit_profile" class="user-info" style="text-decoration:none; cursor:pointer;" title="Edit Profile">
+                    <div class="user-avatar" id="navAvatar">{{ session.get('user_name', 'F')[0] | upper }}</div>
+                    <div class="user-details">
+                        <span class="user-name" id="navName">{{ session.get('user_name', 'Faculty') }}</span>
+                        <span class="user-role" id="navDept">{{ session.get('user_dept', 'Department') }}</span>
+                    </div>
+                </a>
+                <a href="/logout" class="btn btn-logout" style="text-decoration:none;">
+                    <span class="btn-icon">🚪</span> Logout
+                </a>
+            </div>
+        </header>
+
+        <div class="page-content">
+            <div class="report-title" style="margin-bottom: 30px;">
+                <span>📊</span>
+                <h1 style="font-size: 2rem; color: #fff;">Attendance Reports</h1>
+            </div>
+
+            <div id="reportsContainer">
+                <div class="empty-state">
+                    <span>⏳</span>
+                    Loading your attendance history…
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadReports();
+    });
+
+    async function loadReports() {
+        const container = document.getElementById('reportsContainer');
+        try {
+            const res = await fetch('/api/faculty/history');
+            const data = await res.json();
+
+            if (!data.success || data.history.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <span>📭</span>
+                        No attendance sessions found. Start by taking attendance!
+                    </div>`;
+                return;
+            }
+
+            // Group by Date
+            const grouped = {};
+            data.history.forEach(session => {
+                if (!grouped[session.date]) {
+                    grouped[session.date] = [];
+                }
+                grouped[session.date].push(session);
+            });
+
+            // Re-sort keys by date DESC (already mostly handled by API but just to be sure)
+            const sortedDates = Object.keys(grouped).sort((a,b) => new Date(b) - new Date(a));
+
+            container.innerHTML = sortedDates.map(date => {
+                const daySessions = grouped[date];
+                // Sort day sessions by period ASC
+                daySessions.sort((a,b) => parseInt(a.period) - parseInt(b.period));
+
+                const dateObj = new Date(date);
+                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+
+                return `
+                    <div class="report-card">
+                        <div class="report-header">
+                            <div class="report-title">
+                                <span class="date-badge">${date} (${dayName})</span>
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="report-table">
+                                <thead>
+                                    <tr>
+                                        <th>Period</th>
+                                        <th>Subject</th>
+                                        <th>Section/Dept</th>
+                                        <th>Present</th>
+                                        <th>Absent</th>
+                                        <th>Success Rate</th>
+                                        <th>Start Time</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${daySessions.map(s => `
+                                        <tr>
+                                            <td><span class="period-bubble">P${s.period}</span></td>
+                                            <td><strong style="color:#fff">${s.subject}</strong></td>
+                                            <td>${s.section} / ${s.department}</td>
+                                            <td><span class="status-present">${s.present}</span></td>
+                                            <td><span class="status-absent">${s.absent}</span></td>
+                                            <td><strong>${s.percentage}%</strong></td>
+                                            <td>${s.start_time}</td>
+                                            <td>
+                                                <a href="/api/faculty/export_session?subject=${encodeURIComponent(s.subject)}&section=${encodeURIComponent(s.section)}&period=${encodeURIComponent(s.period)}&date=${encodeURIComponent(s.date)}" 
+                                                   class="btn-excel-sm" style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.3); color:#34d399; padding:4px 10px; border-radius:6px; font-size:0.75rem; text-decoration:none;">
+                                                   📥 Export
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+        } catch (err) {
+            console.error('Failed to load reports', err);
+            container.innerHTML = '<div class="empty-state"><span>⚠️</span>Failed to load report data.</div>';
+        }
+    }
+    </script>
+</body>
+</html>

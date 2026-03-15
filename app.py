@@ -198,7 +198,8 @@ def begin_attendance():
     # Start the attendance logic session (pre-initialises before webcam page loads)
     from attendance_logic import start_attendance_session
     faculty_id = session.get('user_id')
-    start_attendance_session(subject, section, period, faculty_id=faculty_id)
+    # Force=True ensures any old session metadata is wiped
+    start_attendance_session(subject, section, period, faculty_id=faculty_id, force=True)
 
     return redirect(url_for('faculty_dashboard'))
 
@@ -208,6 +209,13 @@ def begin_attendance():
 def faculty_dashboard():
     """Webcam attendance tracking page (unchanged)."""
     return render_template('faculty_dashboard.html')
+
+
+@app.route('/faculty_reports')
+@require_faculty
+def faculty_reports():
+    """Attendance reports page."""
+    return render_template('faculty_reports.html')
 
 
 # ─── Faculty Dashboard API Endpoints ─────────────────────────────────────────
@@ -268,7 +276,7 @@ def api_faculty_history():
     from models import get_faculty_attendance_history
     faculty_id = session.get('user_id')
     faculty_dept = session.get('user_dept', '')
-    records = get_faculty_attendance_history(faculty_id, limit=20)
+    records = get_faculty_attendance_history(faculty_id, limit=1000)
 
     history = []
     for r in records:
@@ -445,8 +453,11 @@ def api_attendance_data():
 @app.route('/api/sync_students', methods=['POST'])
 def api_sync_students():
     from models import sync_enrolled_students, clear_sample_students
+    from advanced_face_recognition import get_recognizer
     removed = clear_sample_students()
     synced = sync_enrolled_students()
+    # Ensure recognizer sees new students immediately
+    get_recognizer().load_students()
     return jsonify({'success': True, 'message': f'Synced {len(synced)} students, removed {removed} old entries', 'synced': synced})
 
 
@@ -537,6 +548,8 @@ def video_feed():
         try:
             from advanced_face_recognition import get_recognizer, draw_recognition_boxes
             recognizer = get_recognizer()
+            # Ensure students are loaded before starting the feed
+            recognizer.load_students()
             use_advanced = True
         except:
             from face_recognition_module import face_manager, draw_face_boxes
@@ -564,14 +577,15 @@ def video_feed():
                     if session_obj.is_active:
                         try:
                             if use_advanced:
-                                if frame_count % 5 == 0:
+                                # Process every 3rd frame for more responsive voting
+                                if frame_count % 3 == 0:
                                     results = recognizer.recognize_frame(frame)
                                     recognizer.add_to_voting_buffer(results)
                                     last_advanced_results = results
                                     voting_result = recognizer.get_voting_result()
                                     if voting_result and voting_result['status'] == 'confirmed':
                                         mark_present(voting_result['name'], voting_result['confidence'] * 100)
-                                        recognizer.clear_voting_buffer()
+                                        # recognizer.clear_voting_buffer() # Keep buffer for continuity or clear if you want 1 ID at a time
                                 display_frame = draw_recognition_boxes(display_frame, last_advanced_results)
                             else:
                                 if frame_count % 5 == 0:

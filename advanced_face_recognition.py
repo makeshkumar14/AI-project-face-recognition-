@@ -538,16 +538,17 @@ class AdvancedFaceRecognizer:
         self.store = EmbeddingStore()
         self.threshold = DEFAULT_THRESHOLD
         
-        # Load existing embeddings
+        self.load_students()
+        logger.info("Advanced Face Recognizer ready")
+    
+    def load_students(self):
+        """Reload enrolled students and metadata."""
         if self.store.load_all_embeddings():
             logger.info(f"Loaded {len(self.store.embeddings)} enrolled students")
-        else:
-            logger.info("No enrolled students found. Run enrollment first.")
-        
-        # Multi-frame voting buffer
-        self._voting_buffer: List[Dict] = []
-        
-        logger.info("Advanced Face Recognizer ready")
+            # Clear voting buffer when students change to prevent ghosting
+            self.clear_voting_buffer()
+            return True
+        return False
     
     def set_threshold(self, threshold: float):
         """Set recognition threshold."""

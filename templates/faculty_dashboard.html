@@ -20,7 +20,7 @@
     <!-- Dashboard Layout -->
     <div class="dashboard">
         <!-- Dashboard Header -->
-        <header class="dashboard-header">
+        <header class="dashboard-header" style="margin:16px 24px 0 24px;">
             <div class="header-left">
                 <div class="header-brand">
                     <span class="header-logo-icon">⚡</span>
@@ -29,9 +29,15 @@
             </div>
             <div class="header-center">
                 <nav class="header-nav">
-                    <a href="/faculty_profile" class="nav-item" style="text-decoration:none;">Dashboard</a>
-                    <span class="nav-item active">Attendance</span>
-                    <span class="nav-item">Reports</span>
+                    <a href="{{ url_for('faculty_profile') }}" class="nav-item">
+                        <span>🏠</span> Dashboard
+                    </a>
+                    <a href="{{ url_for('faculty_dashboard') }}" class="nav-item active">
+                        <span>📋</span> Attendance
+                    </a>
+                    <a href="{{ url_for('faculty_reports') }}" class="nav-item">
+                        <span>📊</span> Reports
+                    </a>
                 </nav>
             </div>
             <div class="header-right">
@@ -42,9 +48,6 @@
                         <span class="user-role">{{ session.get('user_dept', 'Department') }}</span>
                     </div>
                 </a>
-                <button class="btn btn-outline theme-toggle-btn" onclick="toggleTheme()">
-                    <span class="theme-icon">🌙</span>
-                </button>
                 <a href="/logout" class="btn btn-logout" style="text-decoration:none;">
                     <span class="btn-icon">🚪</span>
                     Logout

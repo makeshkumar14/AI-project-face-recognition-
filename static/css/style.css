@@ -20,8 +20,8 @@
 
     /* Text Colors */
     --text-primary: #ffffff;
-    --text-secondary: #c0cae0;
-    --text-muted: #8a94b0;
+    --text-secondary: #ffffff;
+    --text-muted: #e2e8f0;
 
     /* Accent Colors */
     --accent-success: #48bb78;
@@ -715,16 +715,28 @@ h4 {
 }
 
 .nav-item {
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: color var(--transition-fast);
+    transition: all var(--transition-fast);
+    padding: 8px 16px;
+    border-radius: 50px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .nav-item:hover,
 .nav-item.active {
-    color: var(--text-primary);
+    background: var(--primary-gradient);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 212, 255, 0.2);
+    transform: translateY(-1px);
 }
 
 .header-logo {
@@ -779,8 +791,9 @@ h4 {
 }
 
 .user-name {
-    font-weight: 500;
-    font-size: 0.9rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #ffffff;
 }
 
 .user-role {

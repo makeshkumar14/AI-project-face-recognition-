@@ -36,20 +36,16 @@ class AttendanceSession:
         self.marked_students = set()  # Roll numbers already marked
         self.lock = threading.Lock()
     
-    def start(self, subject, section, period, date=None, faculty_id=None):
+    def start(self, subject, section, period, date=None, faculty_id=None, force=True):
         """
         Start a new attendance session.
-
-        Args:
-            subject: Subject name (e.g., "Artificial Intelligence")
-            section: Class section (e.g., "A")
-            period: Period number (e.g., "1")
-            date: Optional date string (defaults to today)
-            faculty_id: ID of the faculty taking attendance
         """
         with self.lock:
-            if self.is_active:
+            if self.is_active and not force:
                 return False, "Session already running"
+
+            # Resetting session state for new metadata
+            self.is_active = False 
 
             self.subject = subject
             self.section = section
@@ -352,9 +348,9 @@ def get_current_session():
     return current_session
 
 
-def start_attendance_session(subject, section, period, date=None, faculty_id=None):
+def start_attendance_session(subject, section, period, date=None, faculty_id=None, force=True):
     """Convenience function to start a session."""
-    return current_session.start(subject, section, period, date, faculty_id)
+    return current_session.start(subject, section, period, date, faculty_id, force=force)
 
 
 def stop_attendance_session():

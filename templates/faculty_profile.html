@@ -62,7 +62,7 @@
         .hero-info h1 {
             font-size: 1.8rem;
             font-weight: 700;
-            color: #fff;
+            color: #ffffff !important;
             margin-bottom: 4px;
         }
 
@@ -310,9 +310,15 @@
             </div>
             <div class="header-center">
                 <nav class="header-nav">
-                    <a href="/faculty_profile" class="nav-item active" style="text-decoration:none;">Dashboard</a>
-                    <span class="nav-item">Attendance</span>
-                    <span class="nav-item">Reports</span>
+                    <a href="{{ url_for('faculty_profile') }}" class="nav-item active">
+                        <span>🏠</span> Dashboard
+                    </a>
+                    <a href="{{ url_for('faculty_dashboard') }}" class="nav-item">
+                        <span>📋</span> Attendance
+                    </a>
+                    <a href="{{ url_for('faculty_reports') }}" class="nav-item">
+                        <span>📊</span> Reports
+                    </a>
                 </nav>
             </div>
             <div class="header-right">
@@ -323,9 +329,6 @@
                         <span class="user-role" id="navDept">Faculty</span>
                     </div>
                 </a>
-                <button class="btn btn-outline theme-toggle-btn" onclick="toggleTheme()" style="padding:10px;">
-                    <span class="theme-icon">🌙</span>
-                </button>
                 <a href="/logout" class="btn btn-logout" style="text-decoration:none;">
                     <span class="btn-icon">🚪</span>
                     Logout
