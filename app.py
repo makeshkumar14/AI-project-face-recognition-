@@ -199,7 +199,7 @@ def begin_attendance():
     from attendance_logic import start_attendance_session
     faculty_id = session.get('user_id')
     # Force=True ensures any old session metadata is wiped
-    start_attendance_session(subject, section, period, faculty_id=faculty_id, force=True)
+    start_attendance_session(subject, section, department, period, faculty_id=faculty_id, force=True)
 
     return redirect(url_for('faculty_dashboard'))
 
@@ -275,7 +275,6 @@ def api_faculty_history():
     """Return past attendance sessions for the logged-in faculty."""
     from models import get_faculty_attendance_history
     faculty_id = session.get('user_id')
-    faculty_dept = session.get('user_dept', '')
     records = get_faculty_attendance_history(faculty_id, limit=1000)
 
     history = []
@@ -287,16 +286,56 @@ def api_faculty_history():
             'date': str(r['date']),
             'subject': r['subject'],
             'section': r['section'],
-            'department': faculty_dept,
+            'department': r.get('department', 'N/A'),
             'period': r['period'],
             'total': total,
             'present': present,
             'absent': r['absent_count'] or 0,
             'percentage': pct,
             'start_time': str(r['start_time']) if r['start_time'] else '--',
+            'color': r.get('color', 'transparent')
         })
 
     return jsonify({'success': True, 'history': history})
+
+
+@app.route('/api/faculty/update_color', methods=['POST'])
+@require_faculty
+def api_update_color():
+    """Update marking color for a session."""
+    data = request.json
+    subject = data.get('subject')
+    section = data.get('section')
+    period = data.get('period')
+    date = data.get('date')
+    color = data.get('color')
+
+    if not all([subject, section, period, date, color]):
+        return jsonify({'success': False, 'error': 'Missing parameters'}), 400
+
+    from models import update_session_color
+    if update_session_color(subject, section, period, date, color):
+        return jsonify({'success': True})
+    return jsonify({'success': False, 'error': 'Update failed'}), 500
+
+
+@app.route('/api/faculty/delete_session', methods=['POST'])
+@require_faculty
+def api_delete_session():
+    """Delete an attendance session."""
+    data = request.json
+    subject = data.get('subject')
+    section = data.get('section')
+    period = data.get('period')
+    date = data.get('date')
+
+    if not all([subject, section, period, date]):
+        return jsonify({'success': False, 'error': 'Missing parameters'}), 400
+
+    from models import delete_session
+    if delete_session(subject, section, period, date):
+        return jsonify({'success': True})
+    return jsonify({'success': False, 'error': 'Delete failed'}), 500
 
 
 @app.route('/api/faculty/export_session')
@@ -344,11 +383,15 @@ def api_export_session():
     ws['A3'] = f"Subject: {subject}"
     ws['A4'] = f"Section: {section}"
     ws['A5'] = f"Period: {period}"
-    ws['A6'] = f"Faculty: {session.get('user_name', 'N/A')}"
+    
+    # Get department from the first record if available
+    dept = records[0]['department'] if records else session.get('user_dept', 'N/A')
+    ws['A6'] = f"Department: {dept}"
+    ws['A7'] = f"Faculty: {session.get('user_name', 'N/A')}"
 
     headers = ['S.No', 'Roll No', 'Student Name', 'Status', 'Time', 'Confidence (%)']
     for col, h in enumerate(headers, 1):
-        cell = ws.cell(row=8, column=col, value=h)
+        cell = ws.cell(row=9, column=col, value=h)
         cell.font = header_font; cell.fill = header_fill
         cell.alignment = Alignment(horizontal='center'); cell.border = thin
 
@@ -360,7 +403,7 @@ def api_export_session():
         row_data = [i, student['roll_no'], student['name'], status, time_str,
                     f"{conf:.1f}" if conf else '--']
         for col, val in enumerate(row_data, 1):
-            cell = ws.cell(row=8+i, column=col, value=val)
+            cell = ws.cell(row=9+i, column=col, value=val)
             cell.border = thin; cell.alignment = Alignment(horizontal='center')
             if col == 4:
                 cell.fill = present_fill if is_present else absent_fill

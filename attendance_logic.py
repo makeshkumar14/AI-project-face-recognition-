@@ -29,14 +29,16 @@ class AttendanceSession:
         self.is_active = False
         self.subject = None
         self.section = None
+        self.department = None
         self.period = None
         self.date = None
         self.faculty_id = None
         self.start_time = None
+        self.color = 'transparent'
         self.marked_students = set()  # Roll numbers already marked
         self.lock = threading.Lock()
     
-    def start(self, subject, section, period, date=None, faculty_id=None, force=True):
+    def start(self, subject, section, department, period, date=None, faculty_id=None, force=True, color='transparent'):
         """
         Start a new attendance session.
         """
@@ -49,10 +51,12 @@ class AttendanceSession:
 
             self.subject = subject
             self.section = section
+            self.department = department
             self.period = str(period)
             self.date = date or datetime.now().strftime('%Y-%m-%d')
             self.faculty_id = faculty_id
             self.start_time = datetime.now()
+            self.color = color
             self.marked_students = set()
             self.is_active = True
 
@@ -67,7 +71,7 @@ class AttendanceSession:
                 if record.get('status') == 'PRESENT':
                     self.marked_students.add(record['roll_no'])
 
-            return True, f"Session started for {subject} - Section {section}, Period {period}"
+            return True, f"Session started for {subject} ({department}) - Section {section}, Period {period}"
     
     def stop(self):
         """Stop the current attendance session."""
@@ -113,12 +117,14 @@ class AttendanceSession:
                         student_id=student['id'],
                         subject=self.subject,
                         section=self.section,
+                        department=self.department,
                         period=self.period,
                         date=self.date,
                         time=current_time,
                         status='ABSENT',
                         confidence=0.0,
-                        faculty_id=self.faculty_id
+                        faculty_id=self.faculty_id,
+                        color=self.color
                     )
     
     def mark_student_present(self, roll_no, confidence=0.0):
@@ -179,12 +185,14 @@ class AttendanceSession:
                     student_id=student['id'],
                     subject=self.subject,
                     section=self.section,
+                    department=self.department,
                     period=self.period,
                     date=self.date,
                     time=current_time,
                     status='PRESENT',
                     confidence=confidence,
-                    faculty_id=self.faculty_id
+                    faculty_id=self.faculty_id,
+                    color=self.color
                 )
             
             if success:
@@ -238,11 +246,13 @@ class AttendanceSession:
                     student_id=student['id'],
                     subject=self.subject,
                     section=self.section,
+                    department=self.department,
                     period=self.period,
                     date=self.date,
                     time=current_time,
                     status='ABSENT',
-                    confidence=0.0
+                    confidence=0.0,
+                    color=self.color
                 )
             
             # Remove from marked set if present
@@ -267,6 +277,7 @@ class AttendanceSession:
             'is_active': self.is_active,
             'subject': self.subject,
             'section': self.section,
+            'department': self.department,
             'period': self.period,
             'date': self.date,
             'start_time': self.start_time.strftime('%H:%M:%S') if self.start_time else None,
@@ -324,9 +335,11 @@ class AttendanceSession:
             'session': {
                 'subject': self.subject,
                 'section': self.section,
+                'department': self.department,
                 'period': self.period,
                 'date': self.date,
-                'is_active': self.is_active
+                'is_active': self.is_active,
+                'color': self.color
             },
             'present': present,
             'absent': absent,
@@ -348,9 +361,9 @@ def get_current_session():
     return current_session
 
 
-def start_attendance_session(subject, section, period, date=None, faculty_id=None, force=True):
+def start_attendance_session(subject, section, department, period, date=None, faculty_id=None, force=True, color='transparent'):
     """Convenience function to start a session."""
-    return current_session.start(subject, section, period, date, faculty_id, force=force)
+    return current_session.start(subject, section, department, period, date, faculty_id, force=force, color=color)
 
 
 def stop_attendance_session():

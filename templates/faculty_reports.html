@@ -125,6 +125,46 @@
             color: #fff;
             outline: none;
         }
+
+        .btn-delete-sm {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: rgba(244,63,94,0.1);
+            border: 1px solid rgba(244,63,94,0.3);
+            color: #f43f5e;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: 8px;
+        }
+        .btn-delete-sm:hover {
+            background: rgba(244,63,94,0.25);
+            transform: scale(1.1);
+        }
+
+        .color-picker-sm {
+            padding: 2px 4px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 0.75rem;
+            outline: none;
+            cursor: pointer;
+        }
+        .color-picker-sm option { background: #1e1e3a; color: #fff; }
+        .color-tag {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
     </style>
 </head>
 <body class="theme-dark">
@@ -243,23 +283,44 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${daySessions.map(s => `
-                                        <tr>
+                                    ${daySessions.map(s => {
+                                        const rowId = btoa(`${s.subject}-${s.section}-${s.period}-${s.date}`);
+                                        const colors = [
+                                            { name: 'None', value: 'transparent' },
+                                            { name: 'Red', value: 'rgba(244,63,94,0.2)' },
+                                            { name: 'Green', value: 'rgba(52,211,153,0.2)' },
+                                            { name: 'Blue', value: 'rgba(99,102,241,0.2)' },
+                                            { name: 'Yellow', value: 'rgba(251,191,36,0.2)' },
+                                            { name: 'Purple', value: 'rgba(168,85,247,0.2)' }
+                                        ];
+                                        const colorOptions = colors.map(c => 
+                                            `<option value="${c.value}" ${s.color === c.value ? 'selected' : ''}>${c.name}</option>`
+                                        ).join('');
+
+                                        return `
+                                        <tr style="background-color: ${s.color || 'transparent'}" id="row-${rowId}">
                                             <td><span class="period-bubble">P${s.period}</span></td>
-                                            <td><strong style="color:#fff">${s.subject}</strong></td>
+                                            <td>
+                                                <span class="color-tag" style="background-color: ${s.color && s.color !== 'transparent' ? s.color : 'transparent'}; border-color: ${s.color && s.color !== 'transparent' ? 'white' : 'rgba(255,255,255,0.2)'}"></span>
+                                                <strong style="color:#fff">${s.subject}</strong>
+                                            </td>
                                             <td>${s.section} / ${s.department}</td>
                                             <td><span class="status-present">${s.present}</span></td>
                                             <td><span class="status-absent">${s.absent}</span></td>
                                             <td><strong>${s.percentage}%</strong></td>
                                             <td>${s.start_time}</td>
-                                            <td>
+                                            <td style="display:flex; align-items:center;">
+                                                <select class="color-picker-sm" onchange="updateColor(this, '${s.subject}', '${s.section}', '${s.period}', '${s.date}', '${rowId}')">
+                                                    ${colorOptions}
+                                                </select>
                                                 <a href="/api/faculty/export_session?subject=${encodeURIComponent(s.subject)}&section=${encodeURIComponent(s.section)}&period=${encodeURIComponent(s.period)}&date=${encodeURIComponent(s.date)}" 
-                                                   class="btn-excel-sm" style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.3); color:#34d399; padding:4px 10px; border-radius:6px; font-size:0.75rem; text-decoration:none;">
+                                                   class="btn-excel-sm" style="margin-left:8px; background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.3); color:#34d399; padding:4px 10px; border-radius:6px; font-size:0.75rem; text-decoration:none;">
                                                    📥 Export
                                                 </a>
+                                                <button class="btn-delete-sm" onclick="deleteSession('${s.subject}', '${s.section}', '${s.period}', '${s.date}', '${rowId}')" title="Delete Record">🗑️</button>
                                             </td>
-                                        </tr>
-                                    `).join('')}
+                                        </tr>`;
+                                    }).join('')}
                                 </tbody>
                             </table>
                         </div>
@@ -270,6 +331,62 @@
         } catch (err) {
             console.error('Failed to load reports', err);
             container.innerHTML = '<div class="empty-state"><span>⚠️</span>Failed to load report data.</div>';
+        }
+    }
+    async function updateColor(select, subject, section, period, date, rowId) {
+        const color = select.value;
+        try {
+            const res = await fetch('/api/faculty/update_color', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subject, section, period, date, color })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const tr = document.getElementById(`row-${rowId}`);
+                if (tr) tr.style.backgroundColor = color;
+                const tag = tr.querySelector('.color-tag');
+                if (tag) {
+                    tag.style.backgroundColor = color !== 'transparent' ? color : 'transparent';
+                    tag.style.borderColor = color !== 'transparent' ? 'white' : 'rgba(255,255,255,0.2)';
+                }
+            } else {
+                alert('Failed to update color');
+            }
+        } catch (err) {
+            console.error('Update color failed', err);
+        }
+    }
+
+    async function deleteSession(subject, section, period, date, rowId) {
+        if (!confirm(`Are you sure you want to delete this attendance record for ${subject}? This cannot be undone.`)) return;
+
+        try {
+            const res = await fetch('/api/faculty/delete_session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subject, section, period, date })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const tr = document.getElementById(`row-${rowId}`);
+                if (tr) {
+                    tr.style.opacity = '0';
+                    tr.style.transform = 'translateX(20px)';
+                    setTimeout(() => {
+                        tr.remove();
+                        // If card is empty, remove card
+                        const card = tr.closest('.report-card');
+                        if (card && card.querySelectorAll('tbody tr').length === 0) {
+                            card.remove();
+                        }
+                    }, 300);
+                }
+            } else {
+                alert('Failed to delete record');
+            }
+        } catch (err) {
+            console.error('Delete failed', err);
         }
     }
     </script>

@@ -13,7 +13,7 @@ MYSQL_CONFIG = {
     'host': os.environ.get('MYSQL_HOST', 'localhost'),
     'port': int(os.environ.get('MYSQL_PORT', 3306)),
     'user': os.environ.get('MYSQL_USER', 'root'),
-    'password': os.environ.get('MYSQL_PASSWORD', 'ratchu@2007'),
+    'password': os.environ.get('MYSQL_PASSWORD', 'makesh14'),
     'database': os.environ.get('MYSQL_DATABASE', 'face_recognition_db'),
 }
 
@@ -67,11 +67,13 @@ def init_db():
             faculty_id INT,
             subject VARCHAR(255) NOT NULL,
             section VARCHAR(50) NOT NULL,
+            department VARCHAR(255) NOT NULL,
             period VARCHAR(50) NOT NULL,
             date VARCHAR(20) NOT NULL,
             time VARCHAR(20) NOT NULL,
             status ENUM('PRESENT', 'ABSENT') NOT NULL,
             confidence FLOAT DEFAULT 0.0,
+            color VARCHAR(50) DEFAULT 'transparent',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (student_id) REFERENCES students(id),
             FOREIGN KEY (faculty_id) REFERENCES faculty(id) ON DELETE SET NULL,
@@ -85,6 +87,18 @@ def init_db():
         cursor.execute("ALTER TABLE attendance ADD CONSTRAINT fk_att_fac FOREIGN KEY (faculty_id) REFERENCES faculty(id) ON DELETE SET NULL")
     except Exception:
         pass  # Column already exists
+
+    # Add department column to existing attendance table if missing
+    try:
+        cursor.execute("ALTER TABLE attendance ADD COLUMN department VARCHAR(255) NOT NULL AFTER section")
+    except Exception:
+        pass
+
+    # Add color column to existing attendance table if missing
+    try:
+        cursor.execute("ALTER TABLE attendance ADD COLUMN color VARCHAR(50) DEFAULT 'transparent' AFTER confidence")
+    except Exception:
+        pass
     
     conn.commit()
     cursor.close()
@@ -364,7 +378,7 @@ def update_faculty(faculty_id, name, email, department):
 # Attendance Database Operations
 # ========================================
 
-def mark_attendance(student_id, subject, section, period, date, time, status, confidence=0.0, faculty_id=None):
+def mark_attendance(student_id, subject, section, department, period, date, time, status, confidence=0.0, faculty_id=None, color='transparent'):
     """
     Mark attendance for a student.
     Returns True if successful, False if duplicate (already marked).
@@ -374,9 +388,9 @@ def mark_attendance(student_id, subject, section, period, date, time, status, co
     try:
         cursor.execute(
             '''INSERT INTO attendance 
-               (student_id, faculty_id, subject, section, period, date, time, status, confidence)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)''',
-            (student_id, faculty_id, subject, section, period, date, time, status, confidence)
+               (student_id, faculty_id, subject, section, department, period, date, time, status, confidence, color)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
+            (student_id, faculty_id, subject, section, department, period, date, time, status, confidence, color)
         )
         conn.commit()
         cursor.close()
@@ -482,6 +496,37 @@ def check_attendance_exists(student_id, subject, section, period, date):
     return record
 
 
+def update_session_color(subject, section, period, date, color):
+    """Update color for all records in a session."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        '''UPDATE attendance 
+           SET color = %s
+           WHERE subject = %s AND section = %s AND period = %s AND date = %s''',
+        (color, subject, section, period, date)
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return True
+
+
+def delete_session(subject, section, period, date):
+    """Delete all records for a session."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        '''DELETE FROM attendance 
+           WHERE subject = %s AND section = %s AND period = %s AND date = %s''',
+        (subject, section, period, date)
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return True
+
+
 def delete_attendance(subject, section, period, date):
     """Delete all attendance records for a specific session."""
     conn = get_db_connection()
@@ -517,13 +562,13 @@ def get_faculty_attendance_history(faculty_id, limit=20):
     # Get distinct sessions — include faculty_id IS NULL for older records
     cursor.execute('''
         SELECT 
-            a.subject, a.section, a.period, a.date,
+            a.subject, a.section, a.department, a.period, a.date, a.color,
             SUM(CASE WHEN a.status = 'PRESENT' THEN 1 ELSE 0 END) AS present_count,
             SUM(CASE WHEN a.status = 'ABSENT'  THEN 1 ELSE 0 END) AS absent_count,
             MIN(a.time) AS start_time
         FROM attendance a
         WHERE a.faculty_id = %s OR a.faculty_id IS NULL
-        GROUP BY a.subject, a.section, a.period, a.date
+        GROUP BY a.subject, a.section, a.department, a.period, a.date, a.color
         ORDER BY a.date DESC, a.period ASC
         LIMIT %s
     ''', (faculty_id, limit))

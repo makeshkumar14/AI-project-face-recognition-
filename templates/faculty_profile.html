@@ -284,6 +284,46 @@
             transform: translateY(-1px);
         }
 
+        .btn-delete-sm {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: rgba(244,63,94,0.1);
+            border: 1px solid rgba(244,63,94,0.3);
+            color: #f43f5e;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: 8px;
+        }
+        .btn-delete-sm:hover {
+            background: rgba(244,63,94,0.25);
+            transform: scale(1.1);
+        }
+
+        .color-picker-sm {
+            padding: 2px 4px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px;
+            color: #fff;
+            font-size: 0.7rem;
+            outline: none;
+            cursor: pointer;
+        }
+        .color-picker-sm option { background: #1e1e3a; color: #fff; }
+        .color-tag {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
         /* ── Responsive ────────────────────────────────────── */
         @media (max-width: 900px) {
             .stats-row { grid-template-columns: repeat(2,1fr); }
@@ -463,7 +503,7 @@
                                 <th>Present / Total</th>
                                 <th>Attendance %</th>
                                 <th>Start Time</th>
-                                <th>Export</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="historyTableBody">
@@ -606,21 +646,99 @@
                 const deptSection = (deptAbbr ? deptAbbr + ' – ' : '') + row.section;
                 
                 const exportUrl = `/api/faculty/export_session?subject=${encodeURIComponent(row.subject)}&section=${encodeURIComponent(row.section)}&period=${encodeURIComponent(row.period)}&date=${encodeURIComponent(row.date)}`;
+                
+                const colors = [
+                    { name: 'None', value: 'transparent' },
+                    { name: 'Red', value: 'rgba(244,63,94,0.2)' },
+                    { name: 'Green', value: 'rgba(52,211,153,0.2)' },
+                    { name: 'Blue', value: 'rgba(99,102,241,0.2)' },
+                    { name: 'Yellow', value: 'rgba(251,191,36,0.2)' },
+                    { name: 'Purple', value: 'rgba(168,85,247,0.2)' }
+                ];
+
+                const colorOptions = colors.map(c => 
+                    `<option value="${c.value}" ${row.color === c.value ? 'selected' : ''}>${c.name}</option>`
+                ).join('');
+
+                const rowId = btoa(`${row.subject}-${row.section}-${row.period}-${row.date}`);
+                
                 return `
-                    <tr>
+                    <tr style="background-color: ${row.color || 'transparent'}" id="row-${rowId}">
                         <td>${row.date}</td>
-                        <td class="subject-name-cell">${row.subject}</td>
+                        <td class="subject-name-cell">
+                            <span class="color-tag" style="background-color: ${row.color && row.color !== 'transparent' ? row.color : 'transparent'}; border-color: ${row.color && row.color !== 'transparent' ? 'white' : 'rgba(255,255,255,0.2)'}"></span>
+                            ${row.subject}
+                        </td>
                         <td>${deptSection}</td>
                         <td>Period&nbsp;${row.period}</td>
                         <td>${row.present} / ${row.total}</td>
                         <td class="${pctClass}">${pct}%</td>
                         <td>${row.start_time}</td>
-                        <td><a href="${exportUrl}" class="btn-excel-sm">📥 Excel</a></td>
+                        <td style="display:flex; align-items:center;">
+                            <select class="color-picker-sm" onchange="updateColor(this, '${row.subject}', '${row.section}', '${row.period}', '${row.date}', '${rowId}')">
+                                ${colorOptions}
+                            </select>
+                            <a href="${exportUrl}" class="btn-excel-sm" style="margin-left:8px;">📥 Export</a>
+                            <button class="btn-delete-sm" onclick="deleteSession('${row.subject}', '${row.section}', '${row.period}', '${row.date}', '${rowId}')" title="Delete Record">🗑️</button>
+                        </td>
                     </tr>`;
             }).join('');
         } catch (err) {
             tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><span>⚠️</span>Failed to load history.</td></tr>`;
             console.error('History load failed', err);
+        }
+    }
+
+    async function updateColor(select, subject, section, period, date, rowId) {
+        const color = select.value;
+        try {
+            const res = await fetch('/api/faculty/update_color', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subject, section, period, date, color })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const tr = document.getElementById(`row-${rowId}`);
+                if (tr) tr.style.backgroundColor = color;
+                const tag = tr.querySelector('.color-tag');
+                if (tag) {
+                    tag.style.backgroundColor = color !== 'transparent' ? color : 'transparent';
+                    tag.style.borderColor = color !== 'transparent' ? 'white' : 'rgba(255,255,255,0.2)';
+                }
+            } else {
+                alert('Failed to update color');
+            }
+        } catch (err) {
+            console.error('Update color failed', err);
+        }
+    }
+
+    async function deleteSession(subject, section, period, date, rowId) {
+        if (!confirm(`Are you sure you want to delete this attendance record for ${subject}? This cannot be undone.`)) return;
+
+        try {
+            const res = await fetch('/api/faculty/delete_session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subject, section, period, date })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const tr = document.getElementById(`row-${rowId}`);
+                if (tr) {
+                    tr.style.opacity = '0';
+                    tr.style.transform = 'translateX(20px)';
+                    setTimeout(() => {
+                        tr.remove();
+                        loadStats(); // Refresh stats
+                    }, 300);
+                }
+            } else {
+                alert('Failed to delete record');
+            }
+        } catch (err) {
+            console.error('Delete failed', err);
         }
     }
     </script>
