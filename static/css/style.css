@@ -209,9 +209,9 @@ h4 {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 14px 28px;
-    font-size: 1rem;
-    font-weight: 600;
+    padding: 16px 32px;
+    font-size: 1.1rem;
+    font-weight: 700;
     border: none;
     border-radius: var(--radius-md);
     cursor: pointer;
@@ -267,6 +267,17 @@ h4 {
 .btn-danger:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 25px rgba(252, 129, 129, 0.5);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 15px rgba(237, 137, 54, 0.4);
+}
+
+.btn-warning:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(237, 137, 54, 0.5);
 }
 
 /* Remove shine effect from danger buttons */
@@ -683,7 +694,8 @@ h4 {
 }
 
 .dashboard-content {
-    margin-top: 0;
+    margin-top: 32px;
+    padding: 0 40px 40px 40px;
 }
 
 .header-left {
@@ -939,6 +951,9 @@ h4 {
     display: flex;
     align-items: center;
     gap: 12px;
+    color: #6366f1;
+    font-size: 1.2rem;
+    font-weight: 700;
 }
 
 .panel-header-icon {
@@ -1017,13 +1032,16 @@ h4 {
 }
 
 .status-text h4 {
-    font-size: 1rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #ffffff;
     margin-bottom: 4px;
 }
 
 .status-text p {
-    color: var(--text-secondary);
-    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+    font-weight: 500;
 }
 
 /* Webcam Preview */
@@ -1585,29 +1603,38 @@ body.theme-light .stat-card {
 }
 
 .live-status-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: var(--radius-sm);
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
+    font-size: 2rem;
+    box-shadow: inset 0 0 10px rgba(255,255,255,0.1);
 }
 
 .live-status-icon.camera {
-    background: rgba(99, 179, 237, 0.2);
+    background: rgba(99, 179, 237, 0.4);
+    color: #ffffff;
+    text-shadow: 0 0 8px rgba(99, 179, 237, 0.8);
 }
 
 .live-status-icon.faces {
-    background: rgba(246, 173, 85, 0.2);
+    background: rgba(246, 173, 85, 0.4);
+    color: #ffffff;
+    text-shadow: 0 0 8px rgba(246, 173, 85, 0.8);
 }
 
 .live-status-icon.marked {
-    background: rgba(72, 187, 120, 0.2);
+    background: rgba(72, 187, 120, 0.4);
+    color: #ffffff;
+    text-shadow: 0 0 8px rgba(72, 187, 120, 0.8);
 }
 
 .live-status-icon.total {
-    background: rgba(102, 126, 234, 0.2);
+    background: rgba(102, 126, 234, 0.4);
+    color: #ffffff;
+    text-shadow: 0 0 8px rgba(102, 126, 234, 0.8);
 }
 
 .live-status-icon.active {
@@ -1615,17 +1642,20 @@ body.theme-light .stat-card {
 }
 
 .live-status-info h4 {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
+    font-size: 0.85rem;
+    color: #ffffff;
+    font-weight: 800;
     margin-bottom: 4px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
+    opacity: 0.9;
 }
 
 .live-status-info p {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-primary);
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #ffffff;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
 .live-status-info .status-active {
@@ -2672,12 +2702,20 @@ body.theme-light .stat-card {
     order: 2;
 }
 
-.present-header {
-    background: linear-gradient(90deg, rgba(72, 187, 120, 0.1) 0%, transparent 100%);
+.present-header h3 {
+    color: #48bb78 !important;
 }
 
-.absent-header {
-    background: linear-gradient(90deg, rgba(252, 129, 129, 0.1) 0%, transparent 100%);
+.present-header .panel-header-icon {
+    color: #48bb78;
+}
+
+.absent-header h3 {
+    color: #ff6b8a !important;
+}
+
+.absent-header .panel-header-icon {
+    color: #ff6b8a;
 }
 
 .present-badge {
@@ -2698,6 +2736,16 @@ body.theme-light .stat-card {
     font-size: 0.85rem;
     font-weight: 600;
     margin-left: 12px;
+}
+
+.present-student-name {
+    color: #48bb78 !important;
+    font-weight: 600;
+}
+
+.absent-student-name {
+    color: #ff6b8a !important;
+    font-weight: 600;
 }
 
 /* Mark Present Button in Absent Table */

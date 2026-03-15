@@ -126,13 +126,13 @@
             line-height: 1;
             margin-bottom: 4px;
         }
-        .stat-info-p p { color: rgba(255,255,255,0.45); font-size: 0.8rem; }
+        .stat-info-p p { color: #ffffff; font-size: 0.8rem; font-weight: 500; }
 
         /* ── Section Heading ──────────────────────────────── */
         .section-heading {
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             font-weight: 700;
-            color: #ffffff;
+            color: #6366f1;
             margin-bottom: 18px;
             display: flex;
             align-items: center;
@@ -249,6 +249,7 @@
             font-size: 0.9rem;
             color: #ffffff;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
+            white-space: nowrap;
         }
 
         table.att-table tr:hover td { background: rgba(255,255,255,0.03); }
@@ -490,7 +491,7 @@
                     <div class="section-heading" style="margin:0">
                         <span>🗂️</span> Past Attendance Sessions
                     </div>
-                    <button onclick="loadHistory()" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:0.85rem;">⟳ Refresh</button>
+                    <button onclick="loadHistory()" style="background:rgba(251,146,60,0.1); border:1px solid rgba(251,146,60,0.3); color:#fb923c; padding:4px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600; transition:all 0.2s;">⟳ Refresh</button>
                 </div>
                 <div class="table-wrap">
                     <table class="att-table">
@@ -605,6 +606,20 @@
         }
     }
 
+    function formatTime12(timeStr) {
+        if (!timeStr) return '--';
+        // Handle HH:MM or HH:MM:SS
+        const parts = timeStr.split(':');
+        if (parts.length < 2) return timeStr;
+        let hour = parseInt(parts[0], 10);
+        const minute = parts[1];
+        const second = parts[2] || '00';
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12;
+        if (hour === 0) hour = 12;
+        return `${String(hour).padStart(2,'0')}:${minute}:${second} ${ampm}`;
+    }
+
     async function loadHistory() {
         const tbody = document.getElementById('historyTableBody');
         tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><span>⏳</span>Loading…</td></tr>';
@@ -627,6 +642,15 @@
                 const pct     = row.percentage;
                 const pctClass = pct >= 75 ? 'pct-high' : pct >= 50 ? 'pct-mid' : 'pct-low';
                 
+                // Reformat Date: YYYY-MM-DD -> DD/MM/YYYY
+                let dateFormatted = row.date;
+                if (row.date && row.date.includes('-')) {
+                    const parts = row.date.split('-');
+                    if (parts.length === 3) {
+                        dateFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    }
+                }
+
                 // Map full department names to abbreviations
                 const deptMap = {
                     'Computer Science': 'CSE',
@@ -662,9 +686,11 @@
 
                 const rowId = btoa(`${row.subject}-${row.section}-${row.period}-${row.date}`);
                 
+                const startTime12 = row.start_time ? formatTime12(row.start_time) : '--';
+
                 return `
                     <tr style="background-color: ${row.color || 'transparent'}" id="row-${rowId}">
-                        <td>${row.date}</td>
+                        <td>${dateFormatted}</td>
                         <td class="subject-name-cell">
                             ${row.subject}
                         </td>
@@ -672,7 +698,7 @@
                         <td>Period&nbsp;${row.period}</td>
                         <td>${row.present} / ${row.total}</td>
                         <td class="${pctClass}">${pct}%</td>
-                        <td>${row.start_time}</td>
+                        <td>${startTime12}</td>
                         <td style="display:flex; align-items:center;">
                             <select class="color-picker-sm" onchange="updateColor(this, '${row.subject}', '${row.section}', '${row.period}', '${row.date}', '${rowId}')">
                                 ${colorOptions}

@@ -195,12 +195,6 @@ def begin_attendance():
     session['current_section'] = section
     session['current_period'] = period
 
-    # Start the attendance logic session (pre-initialises before webcam page loads)
-    from attendance_logic import start_attendance_session
-    faculty_id = session.get('user_id')
-    # Force=True ensures any old session metadata is wiped
-    start_attendance_session(subject, section, department, period, faculty_id=faculty_id, force=True)
-
     return redirect(url_for('faculty_dashboard'))
 
 
@@ -450,48 +444,84 @@ def get_student_image(student_dir):
 # ─── Attendance Data API (used by webcam dashboard JS) ───────────────────────
 @app.route('/api/attendance_data', methods=['GET'])
 def api_attendance_data():
-    from attendance_logic import get_session_summary
+    from attendance_logic import get_session_summary, get_faculty_session
     from models import get_all_students
 
     faculty_id = session.get('user_id')
     summary = get_session_summary(faculty_id)
-    current_section = summary['session'].get('section') if summary else None
-    all_students = get_all_students(section=current_section)
+    session_obj = get_faculty_session(faculty_id)
 
+    # For this mini-project, treat the 7 sample students as shared across all
+    # sections and subjects so that the same student list is used regardless
+    # of which section is selected for the current session.
+    all_students = get_all_students()
+
+    # If there is no summary at all (no session ever started today), show an
+    # initial state with everyone absent. If a summary exists, we keep using it
+    # even after the session is stopped so the final result stays visible.
     if not summary:
         absent_list = []
         for s in all_students:
             img_path = s.get('image_path', '')
             folder_name = img_path.replace('dataset/', '').replace('dataset\\', '')
             absent_list.append({
-                'id': s['roll_no'], 'name': s['name'],
+                'id': s['roll_no'],
+                'name': s['name'],
                 'image_url': f"/api/student_image/{folder_name}" if folder_name else None
             })
-        return jsonify({'success': True, 'session_active': False, 'present': [],
-                        'absent': absent_list, 'total': len(all_students),
-                        'present_count': 0, 'absent_count': len(all_students)})
+        return jsonify({
+            'success': True,
+            'session_active': False,
+            'present': [],
+            'absent': absent_list,
+            'total': len(all_students),
+            'present_count': 0,
+            'absent_count': len(all_students),
+            'faces_detected': 0
+        })
 
+    # Build present / absent lists with images
     present_roll_nos = set()
     present = []
     for s in summary.get('present', []):
         present_roll_nos.add(s['roll_no'])
         img_path = s.get('image_path', '')
         folder_name = img_path.replace('dataset/', '').replace('dataset\\', '')
-        present.append({'id': s['roll_no'], 'name': s['name'],
-                        'time': s.get('time', '--:--'), 'confidence': s.get('confidence', 0),
-                        'image_url': f"/api/student_image/{folder_name}" if folder_name else None})
+        present.append({
+            'id': s['roll_no'],
+            'name': s['name'],
+            'time': s.get('time', '--:--'),
+            'confidence': s.get('confidence', 0),
+            'image_url': f"/api/student_image/{folder_name}" if folder_name else None
+        })
 
     absent = []
     for s in all_students:
         if s['roll_no'] not in present_roll_nos:
             img_path = s.get('image_path', '')
             folder_name = img_path.replace('dataset/', '').replace('dataset\\', '')
-            absent.append({'id': s['roll_no'], 'name': s['name'],
-                           'image_url': f"/api/student_image/{folder_name}" if folder_name else None})
+            absent.append({
+                'id': s['roll_no'],
+                'name': s['name'],
+                'image_url': f"/api/student_image/{folder_name}" if folder_name else None
+            })
 
-    return jsonify({'success': True, 'session_active': True, 'session': summary['session'],
-                    'present': present, 'absent': absent, 'total': len(all_students),
-                    'present_count': len(present), 'absent_count': len(absent)})
+    counts = summary.get('counts', {})
+    faces_detected = counts.get('faces_detected', session_obj.current_face_count)
+
+    return jsonify({
+        'success': True,
+        # session_active reflects whether the camera loop should run,
+        # but the present/absent result is always returned if we have it.
+        'session_active': session_obj.is_active,
+        'session': summary['session'],
+        'present': present,
+        'absent': absent,
+        'total': len(all_students),
+        'present_count': len(present),
+        'absent_count': len(absent),
+        'faces_detected': faces_detected
+    })
 
 
 @app.route('/api/sync_students', methods=['POST'])
@@ -618,31 +648,39 @@ def video_feed():
                         time.sleep(0.01); continue
 
                     session_obj = get_faculty_session(faculty_id)
+                    
+                    # Stop the camera stream if the session is no longer active
+                    if not session_obj.is_active:
+                        print("Session ended. Stopping video feed.")
+                        break
+                        
                     display_frame = frame.copy()
-
-                    if session_obj.is_active:
-                        try:
-                            if use_advanced:
-                                # Process every 3rd frame for more responsive voting
-                                if frame_count % 3 == 0:
-                                    results = recognizer.recognize_frame(frame)
-                                    recognizer.add_to_voting_buffer(results)
-                                    last_advanced_results = results
-                                    voting_result = recognizer.get_voting_result()
-                                    if voting_result and voting_result['status'] == 'confirmed':
-                                        mark_present(faculty_id, voting_result['name'], voting_result['confidence'] * 100)
-                                        # recognizer.clear_voting_buffer() # Keep buffer for continuity or clear if you want 1 ID at a time
-                                display_frame = draw_recognition_boxes(display_frame, last_advanced_results)
-                            else:
-                                if frame_count % 5 == 0:
-                                    recognized = face_manager.recognize_faces(frame)
-                                    for face in recognized:
-                                        if face.get('roll_no') and face['roll_no'] != 'UNKNOWN':
-                                            mark_present(faculty_id, face['roll_no'], face['confidence'])
-                                    last_basic_results = recognized
-                                display_frame = draw_face_boxes(display_frame, last_basic_results)
-                        except Exception as e:
-                            print(f"Recognition error: {e}")
+                    try:
+                        if use_advanced:
+                            # Process every 3rd frame for more responsive voting
+                            if frame_count % 3 == 0:
+                                results = recognizer.recognize_frame(frame)
+                                recognizer.add_to_voting_buffer(results)
+                                last_advanced_results = results
+                                session_obj.current_face_count = len(results)
+                                voting_result = recognizer.get_voting_result()
+                                if voting_result and voting_result['status'] == 'confirmed':
+                                    print(f"DEBUG: Recognizer confirmed {voting_result['name']} with {voting_result['confidence']}%")
+                                    mark_present(faculty_id, voting_result['name'], voting_result['confidence'] * 100)
+                                    # recognizer.clear_voting_buffer() # Keep buffer for continuity or clear if you want 1 ID at a time
+                            display_frame = draw_recognition_boxes(display_frame, last_advanced_results)
+                        else:
+                            if frame_count % 5 == 0:
+                                recognized = face_manager.recognize_faces(frame)
+                                for face in recognized:
+                                    if face.get('roll_no') and face['roll_no'] != 'UNKNOWN':
+                                        print(f"DEBUG: Basic recognized {face['roll_no']} with {face['confidence']}%")
+                                        mark_present(faculty_id, face['roll_no'], face['confidence'])
+                                last_basic_results = recognized
+                                session_obj.current_face_count = len(recognized)
+                            display_frame = draw_face_boxes(display_frame, last_basic_results)
+                    except Exception as e:
+                        print(f"Recognition error: {e}")
 
                     frame_count += 1
                     ret, buf = cv2.imencode('.jpg', display_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])

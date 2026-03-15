@@ -564,15 +564,10 @@ def delete_attendance(subject, section, period, date):
 def get_faculty_attendance_history(faculty_id, limit=20):
     """Get past attendance sessions for a specific faculty member.
     
-    Total = all enrolled students (same as recognition page).
-    Includes records with faculty_id NULL (older sessions).
+    Calculates total students dynamically per session based on section and department.
     """
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-
-    # Total students = same as recognition page (all students, no section filter)
-    cursor.execute('SELECT COUNT(*) AS cnt FROM students')
-    total_students = cursor.fetchone()['cnt'] or 0
 
     # Get distinct sessions — strictly for this faculty member
     cursor.execute('''
@@ -589,9 +584,27 @@ def get_faculty_attendance_history(faculty_id, limit=20):
     ''', (faculty_id, limit))
     sessions = cursor.fetchall()
 
-    # Set total = all students (matches recognition page)
+    # For each session, calculate the total students in that section/department
     for s in sessions:
-        s['total'] = total_students
+        # If section is 'A' (or any single section), count students in that section
+        # Default to all students if section is broad or not specifically mapped
+        cursor.execute(
+            'SELECT COUNT(*) AS cnt FROM students WHERE section = %s', 
+            (s['section'],)
+        )
+        section_total = cursor.fetchone()['cnt'] or 0
+        
+        # If section filter returned 0 (e.g. section mismatch), fall back to all students
+        if section_total == 0:
+            cursor.execute('SELECT COUNT(*) AS cnt FROM students')
+            section_total = cursor.fetchone()['cnt'] or 0
+            
+        s['total'] = section_total
+        # Derive absent_count from total - present_count so that history and
+        # reports remain correct even if ABSENT rows were not explicitly
+        # inserted for that session.
+        present = s.get('present_count') or 0
+        s['absent_count'] = max(0, section_total - present)
 
     cursor.close()
     conn.close()

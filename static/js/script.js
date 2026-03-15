@@ -501,6 +501,16 @@ function loadAttendanceData() {
           totalStudentsEl.textContent = data.total;
         }
 
+        // Update running state based on session_active from backend
+        const sessionActive = data.session_active || false;
+        
+        // If state changed from inactive to active (e.g. page refresh), start polling
+        if (sessionActive && !isAttendanceRunning) {
+          startRecognitionPolling();
+        }
+        
+        isAttendanceRunning = sessionActive;
+
         // Store in global for later use
         window.attendanceData = {
           present: data.present,
@@ -511,9 +521,48 @@ function loadAttendanceData() {
         renderPresentTable(data.present);
         renderAbsentTable(data.absent);
 
+        // Update UI components to match session state
+        updateStatusIndicator(sessionActive && isAttendanceRunning);
+        updateSessionBadge(sessionActive);
+        updateCameraStatus(sessionActive && isAttendanceRunning);
+
+        // Update button states
+        const startBtn = document.getElementById("startAttendance");
+        const stopBtn = document.getElementById("stopAttendance");
+        if (startBtn && stopBtn) {
+          startBtn.disabled = isAttendanceRunning;
+          stopBtn.disabled = !isAttendanceRunning;
+        }
+
+        // Sync webcam feed with session state
+        const webcamFeed = document.getElementById("webcamFeed");
+        const placeholder = document.querySelector(".webcam-placeholder");
+        const webcamContainer = document.querySelector(".webcam-container");
+        
+        if (webcamFeed && placeholder && webcamContainer) {
+          if (isAttendanceRunning) {
+            // Only set src if it's not already set to avoid flickering/restarting
+            if (!webcamFeed.src || webcamFeed.src.indexOf('/video_feed') === -1) {
+              webcamFeed.src = "/video_feed";
+            }
+            webcamFeed.style.display = "block";
+            placeholder.style.display = "none";
+            webcamContainer.classList.add("active");
+          } else {
+            // Explicitly hide when session is inactive OR camera not started
+            webcamFeed.src = "";
+            webcamFeed.style.display = "none";
+            placeholder.style.display = "flex";
+            webcamContainer.classList.remove("active");
+          }
+        }
+
         studentsMarkedCount = data.present_count;
         updateStudentsMarked(studentsMarkedCount);
-        updateFacesDetected(studentsMarkedCount);
+        
+        // Use faces_detected from API if provided, else fall back to marked count
+        const facesDetected = data.faces_detected !== undefined ? data.faces_detected : data.present_count;
+        updateFacesDetected(facesDetected);
       }
     })
     .catch((error) => {
@@ -571,7 +620,7 @@ function renderPresentTable(data) {
                 <div class="student-info">
                     <div class="student-avatar">${avatarContent}</div>
                     <div>
-                        <div class="student-name">${student.name}</div>
+                        <div class="student-name present-student-name">${student.name}</div>
                     </div>
                 </div>
             </td>
@@ -606,7 +655,8 @@ function renderAbsentTable(data) {
     if (data.length > 0) {
       emptyState.style.display = "none";
     } else {
-      emptyState.style.display = "block";
+      // Only show empty state if session is running
+      emptyState.style.display = isAttendanceRunning ? "block" : "none";
     }
   }
 
@@ -632,7 +682,7 @@ function renderAbsentTable(data) {
                 <div class="student-info">
                     <div class="student-avatar" style="background: linear-gradient(135deg, #fc8181, #f56565);">${avatarContent}</div>
                     <div>
-                        <div class="student-name">${student.name}</div>
+                        <div class="student-name absent-student-name">${student.name}</div>
                     </div>
                 </div>
             </td>
@@ -754,7 +804,7 @@ function addLogEntry(message, type = "info") {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    hour12: false,
+    hour12: true,
   });
 
   const icons = {
@@ -797,7 +847,7 @@ function updateLogTimestamp() {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
-      hour12: false,
+      hour12: true,
     });
   }
 }
@@ -875,6 +925,7 @@ function updateCurrentTime() {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
+      hour12: true,
     });
   }
 }

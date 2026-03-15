@@ -78,6 +78,7 @@
             font-size: 0.9rem;
             color: #ffffff;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            white-space: nowrap;
         }
         .period-bubble {
             display: inline-block;
@@ -227,6 +228,19 @@
         loadReports();
     });
 
+    function formatTime12(timeStr) {
+        if (!timeStr) return '--';
+        const parts = timeStr.split(':');
+        if (parts.length < 2) return timeStr;
+        let hour = parseInt(parts[0], 10);
+        const minute = parts[1];
+        const second = parts[2] || '00';
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12;
+        if (hour === 0) hour = 12;
+        return `${String(hour).padStart(2,'0')}:${minute}:${second} ${ampm}`;
+    }
+
     async function loadReports() {
         const container = document.getElementById('reportsContainer');
         try {
@@ -262,11 +276,20 @@
                 const dateObj = new Date(date);
                 const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
 
+                // Reformat Date: YYYY-MM-DD -> DD/MM/YYYY
+                let dateFormatted = date;
+                if (date && date.includes('-')) {
+                    const parts = date.split('-');
+                    if (parts.length === 3) {
+                        dateFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    }
+                }
+
                 return `
                     <div class="report-card">
                         <div class="report-header">
                             <div class="report-title">
-                                <span class="date-badge">${date} (${dayName})</span>
+                                <span class="date-badge">${dateFormatted} (${dayName})</span>
                             </div>
                         </div>
                         <div class="table-wrap">
@@ -298,6 +321,8 @@
                                             `<option value="${c.value}" ${s.color === c.value ? 'selected' : ''}>${c.name}</option>`
                                         ).join('');
 
+                                        const startTime12 = s.start_time ? formatTime12(s.start_time) : '--';
+
                                         return `
                                         <tr style="background-color: ${s.color || 'transparent'}" id="row-${rowId}">
                                             <td><span class="period-bubble">P${s.period}</span></td>
@@ -308,7 +333,7 @@
                                             <td><span class="status-present">${s.present}</span></td>
                                             <td><span class="status-absent">${s.absent}</span></td>
                                             <td><strong>${s.percentage}%</strong></td>
-                                            <td>${s.start_time}</td>
+                                            <td>${startTime12}</td>
                                             <td style="display:flex; align-items:center;">
                                                 <select class="color-picker-sm" onchange="updateColor(this, '${s.subject}', '${s.section}', '${s.period}', '${s.date}', '${rowId}')">
                                                     ${colorOptions}

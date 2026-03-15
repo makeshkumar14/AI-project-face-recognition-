@@ -7,14 +7,31 @@ import threading
 from datetime import datetime
 from typing import Dict, List, Set, Optional
 from models import (
-    get_all_students, 
+    get_all_students,
     get_student_by_roll_no,
     get_student_by_name,
-    mark_attendance, 
+    mark_attendance,
     check_attendance_exists,
     update_attendance_status,
-    get_attendance
+    get_attendance,
 )
+
+
+#
+# Mapping of embedding folder names (used by the advanced recognizer / dataset)
+# to canonical roll numbers used in the database. This mirrors the mapping used
+# during student sync so that recognizer names like "makeshkumar" can still be
+# resolved even if the UI mainly works with roll numbers.
+#
+EMBEDDING_NAME_TO_ROLL = {
+    'makeshkumar': '693',
+    'kavin': '647',
+    'rohanbala': '648',
+    'ratchagan': '655',
+    'parkavan': '685',
+    'boopathi': '686',
+    'hasvandh': '696',
+}
 
 
 class AttendanceSession:
@@ -37,6 +54,7 @@ class AttendanceSession:
         self.start_time = None
         self.color = 'transparent'
         self.marked_students = set()  # Roll numbers already marked
+        self.current_face_count = 0    # Faces in current frame
         self.lock = threading.Lock()
     
     def start(self, subject, section, department, period, date=None, faculty_id=None, force=True, color='transparent'):
@@ -130,7 +148,7 @@ class AttendanceSession:
                         color=self.color
                     )
     
-    def mark_student_present(self, roll_no, confidence=0.0):
+    def mark_student_present(self, identifier, confidence=0.0):
         """
         Mark a student as present.
         
@@ -145,14 +163,47 @@ class AttendanceSession:
             if not self.subject:
                 return False, "No session initialized"
             
-            # Get student from database - try roll_no first, then name
-            student = get_student_by_roll_no(roll_no)
+            # Normalize incoming identifier
+            raw_identifier = str(identifier).strip()
+            if not raw_identifier:
+                return False, "Empty identifier"
+
+            # 1) If identifier matches a known embedding name, map to roll number
+            mapped_roll = EMBEDDING_NAME_TO_ROLL.get(raw_identifier.lower())
+            student = None
+            if mapped_roll:
+                student = get_student_by_roll_no(mapped_roll)
+
+            # 2) Try as roll number (normalized to uppercase) if still not found
             if not student:
-                # If roll_no search fails, try searching by name
-                student = get_student_by_name(roll_no)
+                roll_candidate = raw_identifier.upper()
+                student = get_student_by_roll_no(roll_candidate)
+
+            # 3) Try exact name match (case-sensitive) if roll lookup failed
+            if not student:
+                student = get_student_by_name(raw_identifier)
+
+            # 4) Try case-insensitive name match within the current section
+            if not student and self.section:
+                students_in_section = get_all_students(section=self.section)
+                lower_identifier = raw_identifier.lower()
+                for s in students_in_section:
+                    if s.get('name', '').lower() == lower_identifier:
+                        student = s
+                        break
+
+            # 5) Fallback: try case-insensitive roll_no match across section
+            if not student and self.section:
+                students_in_section = get_all_students(section=self.section)
+                lower_identifier = raw_identifier.lower()
+                for s in students_in_section:
+                    if s.get('roll_no', '').lower() == lower_identifier:
+                        student = s
+                        break
                 
             if not student:
-                return False, f"Student {roll_no} not found"
+                print(f"WARNING: Student {raw_identifier} not found in database")
+                return False, f"Student {raw_identifier} not found"
                 
             # Use the canonical roll number from the database record
             db_roll_no = student['roll_no']
@@ -296,7 +347,11 @@ class AttendanceSession:
         if not self.subject or not self.section:
             return None
         
-        all_students = get_all_students(section=self.section)
+        # For this mini-project, treat the sample dataset as shared across all
+        # sections so that the same 7 students appear regardless of the chosen
+        # section/subject. This avoids empty lists when the session section
+        # does not match the students' stored section.
+        all_students = get_all_students()
         attendance_records = get_attendance(
             subject=self.subject,
             section=self.section,
@@ -352,7 +407,8 @@ class AttendanceSession:
                 'total': total,
                 'present': present_count,
                 'absent': absent_count,
-                'percentage': round((present_count / total * 100), 1) if total > 0 else 0
+                'percentage': round((present_count / total * 100), 1) if total > 0 else 0,
+                'faces_detected': self.current_face_count
             }
         }
 
