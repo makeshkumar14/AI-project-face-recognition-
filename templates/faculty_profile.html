@@ -20,7 +20,7 @@
         /* ── Main Layout ───────────────────────────────────── */
         .page-content {
             flex: 1;
-            padding: 0 32px 32px 32px;
+            padding: 24px 32px 32px 32px;
             max-width: 1200px;
             margin: 0 auto;
             width: 100%;
@@ -31,7 +31,7 @@
             background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08));
             border: 1px solid rgba(99,102,241,0.2);
             border-radius: 20px;
-            padding: 32px 36px;
+            padding: 16px 36px;
             display: flex;
             align-items: center;
             gap: 28px;
@@ -131,12 +131,13 @@
         /* ── Section Heading ──────────────────────────────── */
         .section-heading {
             font-size: 1.1rem;
-            font-weight: 600;
-            color: rgba(255,255,255,0.85);
+            font-weight: 700;
+            color: #ffffff;
             margin-bottom: 18px;
             display: flex;
             align-items: center;
             gap: 10px;
+            letter-spacing: 0.5px;
         }
 
         /* ── Attendance Form Panel ─────────────────────────── */
@@ -157,11 +158,11 @@
 
         .form-group label {
             display: block;
-            color: rgba(255,255,255,0.5);
-            font-size: 0.78rem;
-            font-weight: 600;
+            color: #ffffff;
+            font-size: 0.85rem;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.1em;
             margin-bottom: 8px;
         }
 
@@ -235,19 +236,19 @@
         table.att-table th {
             padding: 14px 20px;
             text-align: left;
-            font-size: 0.75rem;
-            font-weight: 600;
+            font-size: 0.85rem;
+            font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.07em;
-            color: rgba(255,255,255,0.35);
-            background: rgba(255,255,255,0.025);
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.08);
         }
 
         table.att-table td {
             padding: 14px 20px;
-            font-size: 0.875rem;
-            color: rgba(255,255,255,0.75);
-            border-top: 1px solid rgba(255,255,255,0.045);
+            font-size: 0.9rem;
+            color: #ffffff;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         table.att-table tr:hover td { background: rgba(255,255,255,0.03); }
@@ -345,7 +346,7 @@
 
     <div class="profile-page">
         <!-- ═══ NAVBAR — same style as recognition page ═══ -->
-        <header class="dashboard-header" style="margin:16px 24px 0 24px;">
+        <header class="dashboard-header">
             <div class="header-left">
                 <div class="header-brand">
                     <span class="header-logo-icon">⚡</span>
@@ -665,7 +666,6 @@
                     <tr style="background-color: ${row.color || 'transparent'}" id="row-${rowId}">
                         <td>${row.date}</td>
                         <td class="subject-name-cell">
-                            <span class="color-tag" style="background-color: ${row.color && row.color !== 'transparent' ? row.color : 'transparent'}; border-color: ${row.color && row.color !== 'transparent' ? 'white' : 'rgba(255,255,255,0.2)'}"></span>
                             ${row.subject}
                         </td>
                         <td>${deptSection}</td>

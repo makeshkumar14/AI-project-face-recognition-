@@ -50,9 +50,9 @@
             <div class="auth-panel active" id="signinPanel">
                 <form class="auth-form" action="{{ url_for('faculty_login') }}" method="POST">
                     <div class="form-group">
-                        <label class="form-label" for="facultyId">Username or e-mail</label>
-                        <input type="text" id="facultyId" name="faculty_id" class="form-input"
-                            placeholder="Enter your faculty ID or email" required autocomplete="username">
+                        <label class="form-label" for="facultyId">Enter your Email ID</label>
+                        <input type="email" id="facultyId" name="faculty_id" class="form-input"
+                            placeholder="Enter your email" required autocomplete="email">
                     </div>
 
                     <div class="form-group">

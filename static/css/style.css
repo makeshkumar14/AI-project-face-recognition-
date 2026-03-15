@@ -672,7 +672,8 @@ h4 {
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 50px;
     padding: 8px 24px;
-    margin: 12px 24px 0 24px;
+    margin: 16px auto 0 auto;
+    width: 80%;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -729,19 +730,19 @@ h4 {
 }
 
 .nav-item {
-    color: var(--text-primary);
-    font-size: 0.85rem;
-    font-weight: 600;
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 700;
     cursor: pointer;
     transition: all var(--transition-fast);
-    padding: 6px 14px;
+    padding: 8px 18px;
     border-radius: 50px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     text-decoration: none;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     white-space: nowrap;
 }
 
@@ -752,6 +753,11 @@ h4 {
     color: #fff;
     box-shadow: 0 4px 12px rgba(0, 212, 255, 0.2);
     transform: translateY(-1px);
+}
+
+.nav-item[href="/logout"]:hover {
+    background: linear-gradient(135deg, #ff4b2b 0%, #ff416c 100%) !important;
+    box-shadow: 0 4px 12px rgba(255, 75, 43, 0.3) !important;
 }
 
 .header-logo {
@@ -1115,17 +1121,20 @@ h4 {
 .attendance-table th {
     padding: 16px 20px;
     text-align: left;
-    font-weight: 600;
-    color: var(--text-secondary);
-    font-size: 0.8rem;
+    font-weight: 800;
+    color: #ffffff;
+    font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 1px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .attendance-table td {
     padding: 16px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    font-weight: 500;
 }
 
 .attendance-table tbody tr {
@@ -1500,11 +1509,14 @@ body.theme-light .stat-card {
 }
 
 .session-label {
-    font-size: 0.8rem;
-    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #ffffff;
     display: flex;
     align-items: center;
     gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .session-value {
